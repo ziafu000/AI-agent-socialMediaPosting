@@ -162,6 +162,22 @@ Fix:
 npm run n8n:workflows:patch-validation
 ```
 
+## Existing local data still looks dirty
+
+The consistency milestone prevents new duplicate-style writes, but it does not auto-delete old local rows.
+
+Run:
+
+```text
+npm run data:consistency:report
+```
+
+Use the report to identify:
+
+- suspicious customer rows
+- duplicate brand profiles
+- duplicate posts
+
 ## Credentials broke after restart
 
 If n8n credentials cannot be decrypted, check whether `N8N_ENCRYPTION_KEY` changed.

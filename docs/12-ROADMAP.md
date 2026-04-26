@@ -143,7 +143,8 @@ Completed locally:
 - customers list and detail
 - dashboard summary
 - validation and error handling
+- data consistency cleanup
 
 Next recommended milestone:
 
-- data consistency cleanup
+- dashboard polish

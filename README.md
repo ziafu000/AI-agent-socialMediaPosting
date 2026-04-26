@@ -58,6 +58,7 @@ Implemented:
 - Customers list and detail
 - Dashboard summary
 - Validation and error handling
+- Data consistency cleanup
 
 Validation and error handling currently includes:
 
@@ -65,3 +66,10 @@ Validation and error handling currently includes:
 - standardized error shape: `{ success: false, message, error }`
 - n8n validation gates on create and update workflows
 - exported local n8n workflows tracked in `n8n/workflows/`
+
+Data consistency cleanup currently includes:
+
+- duplicate-safe save behavior for brand profiles
+- duplicate-safe create behavior for identical post drafts
+- not-found error response on update workflows
+- local audit script: `npm run data:consistency:report`

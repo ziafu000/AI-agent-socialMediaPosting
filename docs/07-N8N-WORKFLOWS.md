@@ -181,6 +181,23 @@ docker exec ai_social_n8n n8n update:workflow --all --active=true
 docker restart ai_social_n8n
 ```
 
+## Data consistency behavior
+
+Current consistency rules:
+
+- `Save Brand Profile` updates the latest existing row when `customer_id + brand_name` already exists
+- `Create Post` avoids inserting another row for the same exact draft payload
+- `Update Brand Profile` returns `404` if the target row does not exist
+- `Update Post` returns `404` if the target row does not exist
+
+Historical junk rows are not auto-deleted by the workflow patch.
+
+Use this report before manual cleanup:
+
+```text
+npm run data:consistency:report
+```
+
 ## Future workflows
 
 ### Save Brand Profile

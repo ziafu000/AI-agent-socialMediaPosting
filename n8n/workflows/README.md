@@ -5,9 +5,9 @@ This folder keeps the exported local workflow state in Git.
 Files:
 
 - `local-active-workflows.json`: current exported workflows from local n8n
-- `local-active-workflows.validation.json`: patched export with validation/error-handling nodes
+- `local-active-workflows.validation.json`: patched export with validation and data-consistency nodes
 
-Validation patch flow:
+Patch flow:
 
 1. Export current workflows from local n8n into `local-active-workflows.json`
 2. Run `npm run n8n:workflows:patch-validation`
@@ -18,3 +18,4 @@ Important:
 
 - n8n workflow import deactivates workflows
 - after import, all workflows must be reactivated and n8n must be restarted
+- historical dirty rows in MySQL are not auto-deleted by this patch

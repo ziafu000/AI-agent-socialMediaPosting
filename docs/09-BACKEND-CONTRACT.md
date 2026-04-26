@@ -61,6 +61,11 @@ Current standardized shape:
 }
 ```
 
+Possible status codes now used:
+
+- `400` for validation failure
+- `404` when an update target record does not exist
+
 ## Contract 2 — Save Brand Profile
 
 Not implemented yet.

@@ -7,6 +7,7 @@
     "docker:down": "docker compose down",
     "docker:logs:n8n": "docker logs -f ai_social_n8n",
     "docker:logs:mysql": "docker logs -f ai_social_mysql",
+    "data:consistency:report": "node scripts/data-consistency-report.mjs",
     "n8n:workflows:patch-validation": "node scripts/patch-n8n-validation.mjs n8n/workflows/local-active-workflows.json n8n/workflows/local-active-workflows.validation.json",
     "n8n:workflows:reactivate": "docker exec ai_social_n8n n8n update:workflow --all --active=true && docker restart ai_social_n8n"
   }

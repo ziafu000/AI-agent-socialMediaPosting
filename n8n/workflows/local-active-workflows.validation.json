@@ -1,7 +1,7 @@
 [
   {
     "createdAt": "2026-04-25T11:11:06.310Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "bB4cL0vOjNMj5gGu",
     "name": "Create Customer",
     "active": true,
@@ -26,13 +26,13 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "INSERT INTO customers (name, email, company_name, industry)\nVALUES (\n  '{{ $json.body.name }}',\n  '{{ $json.body.email }}',\n  '{{ $json.body.company_name }}',\n  '{{ $json.body.industry }}'\n)\nON DUPLICATE KEY UPDATE\n  name = VALUES(name),\n  company_name = VALUES(company_name),\n  industry = VALUES(industry);",
+          "query": "INSERT INTO customers (name, email, company_name, industry)\nVALUES (\n  '{{ $('Validate Input').item.json.body.name }}',\n  '{{ $('Validate Input').item.json.body.email }}',\n  '{{ $('Validate Input').item.json.body.company_name }}',\n  '{{ $('Validate Input').item.json.body.industry }}'\n)\nON DUPLICATE KEY UPDATE\n  name = VALUES(name),\n  company_name = VALUES(company_name),\n  industry = VALUES(industry);",
           "options": {}
         },
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
-          1100,
+          1540,
           0
         ],
         "id": "5b6c6c5f-7959-4c6d-9155-2412f0f925ca",
@@ -54,7 +54,7 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1.2,
         "position": [
-          1540,
+          1980,
           0
         ],
         "id": "6689b607-f979-4c6e-9887-96824ed6ef7e",
@@ -69,7 +69,7 @@
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
-          1320,
+          1760,
           0
         ],
         "id": "a5506314-fd5d-42cb-b4ca-837a2becd32a",
@@ -106,7 +106,7 @@
             },
             "conditions": [
               {
-                "id": "valid-create-customer",
+                "id": "if-create-customer",
                 "leftValue": "={{ $json.valid }}",
                 "rightValue": true,
                 "operator": {
@@ -191,24 +191,6 @@
             }
           ]
         ]
-      },
-      "Is Valid": {
-        "main": [
-          [
-            {
-              "node": "Validate Input",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Respond Validation Error",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
       }
     },
     "settings": {
@@ -225,7 +207,7 @@
   },
   {
     "createdAt": "2026-04-25T11:46:35.739Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "q3dB04Hh2tqxKtdc",
     "name": "Save Brand Profile",
     "active": true,
@@ -250,14 +232,14 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "INSERT INTO brand_profiles (\n  customer_id,\n  brand_name,\n  target_audience,\n  brand_voice,\n  products_services,\n  default_cta,\n  words_to_use,\n  words_to_avoid\n)\nVALUES (\n  {{ $json.body.customer_id }},\n  '{{ $json.body.brand_name }}',\n  '{{ $json.body.target_audience }}',\n  '{{ $json.body.brand_voice }}',\n  '{{ $json.body.products_services }}',\n  '{{ $json.body.default_cta }}',\n  '{{ $json.body.words_to_use }}',\n  '{{ $json.body.words_to_avoid }}'\n);\n",
+          "query": "UPDATE brand_profiles\nSET\n  brand_name = '{{ $('Validate Input').item.json.body.brand_name }}',\n  target_audience = '{{ $('Validate Input').item.json.body.target_audience }}',\n  brand_voice = '{{ $('Validate Input').item.json.body.brand_voice }}',\n  products_services = '{{ $('Validate Input').item.json.body.products_services }}',\n  default_cta = '{{ $('Validate Input').item.json.body.default_cta }}',\n  words_to_use = '{{ $('Validate Input').item.json.body.words_to_use }}',\n  words_to_avoid = '{{ $('Validate Input').item.json.body.words_to_avoid }}'\nWHERE id = {{ $('Find Existing Brand Profile').item.json.id }};",
           "options": {}
         },
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
           1100,
-          0
+          -260
         ],
         "id": "30db8f00-4c73-4361-a5f9-87134983c46f",
         "name": "MySQL",
@@ -279,7 +261,7 @@
         "typeVersion": 1.2,
         "position": [
           1540,
-          0
+          -140
         ],
         "id": "3750fe2a-b1fb-403d-8d36-aeda5a0b2e48",
         "name": "Respond to Webhook"
@@ -294,7 +276,7 @@
         "typeVersion": 2.4,
         "position": [
           1320,
-          0
+          -140
         ],
         "id": "3cec04af-feae-4eba-9389-a9831bbb13d2",
         "name": "MySQL1",
@@ -330,7 +312,7 @@
             },
             "conditions": [
               {
-                "id": "valid-save-brand-profile",
+                "id": "if-save-brand-profile",
                 "leftValue": "={{ $json.valid }}",
                 "rightValue": true,
                 "operator": {
@@ -369,6 +351,84 @@
         ],
         "id": "respond-validation-error-save-brand-profile",
         "name": "Respond Validation Error"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT id\nFROM brand_profiles\nWHERE customer_id = {{ $('Validate Input').item.json.body.customer_id }}\n  AND brand_name = '{{ $('Validate Input').item.json.body.brand_name }}'\nORDER BY id DESC\nLIMIT 1;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          660,
+          -140
+        ],
+        "id": "find-existing-brand-profile",
+        "name": "Find Existing Brand Profile",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mySql": {
+            "id": "BKYkXhg7gKhGGXMN",
+            "name": "MySQL account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "brand-profile-exists",
+                "leftValue": "={{ $json.id !== undefined }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          -140
+        ],
+        "id": "brand-profile-exists",
+        "name": "Brand Profile Exists"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO brand_profiles (\n  customer_id,\n  brand_name,\n  target_audience,\n  brand_voice,\n  products_services,\n  default_cta,\n  words_to_use,\n  words_to_avoid\n)\nVALUES (\n  {{ $('Validate Input').item.json.body.customer_id }},\n  '{{ $('Validate Input').item.json.body.brand_name }}',\n  '{{ $('Validate Input').item.json.body.target_audience }}',\n  '{{ $('Validate Input').item.json.body.brand_voice }}',\n  '{{ $('Validate Input').item.json.body.products_services }}',\n  '{{ $('Validate Input').item.json.body.default_cta }}',\n  '{{ $('Validate Input').item.json.body.words_to_use }}',\n  '{{ $('Validate Input').item.json.body.words_to_avoid }}'\n);",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          1100,
+          -20
+        ],
+        "id": "insert-brand-profile",
+        "name": "Insert Brand Profile",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mySql": {
+            "id": "BKYkXhg7gKhGGXMN",
+            "name": "MySQL account"
+          }
+        }
       }
     ],
     "connections": {
@@ -420,7 +480,7 @@
         "main": [
           [
             {
-              "node": "Validate Input",
+              "node": "Find Existing Brand Profile",
               "type": "main",
               "index": 0
             }
@@ -428,6 +488,46 @@
           [
             {
               "node": "Respond Validation Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Existing Brand Profile": {
+        "main": [
+          [
+            {
+              "node": "Brand Profile Exists",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Brand Profile Exists": {
+        "main": [
+          [
+            {
+              "node": "MySQL",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Insert Brand Profile",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert Brand Profile": {
+        "main": [
+          [
+            {
+              "node": "MySQL1",
               "type": "main",
               "index": 0
             }
@@ -449,7 +549,7 @@
   },
   {
     "createdAt": "2026-04-25T11:57:27.895Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "6FFIeXBzAFvmllM4",
     "name": "Create Post",
     "active": true,
@@ -474,14 +574,14 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "INSERT INTO posts (\n  customer_id,\n  platform,\n  topic,\n  caption,\n  hashtags,\n  status,\n  scheduled_at\n)\nVALUES (\n  {{ $json.body.customer_id }},\n  '{{ $json.body.platform }}',\n  '{{ $json.body.topic }}',\n  '{{ $json.body.caption }}',\n  '{{ $json.body.hashtags }}',\n  '{{ $json.body.status }}',\n  NULLIF('{{ $json.body.scheduled_at }}', '')\n);\n",
+          "query": "UPDATE posts\nSET\n  caption = '{{ $('Validate Input').item.json.body.caption }}',\n  hashtags = '{{ $('Validate Input').item.json.body.hashtags }}',\n  status = '{{ $('Validate Input').item.json.body.status }}',\n  scheduled_at = NULLIF('{{ $('Validate Input').item.json.body.scheduled_at }}', ''),\n  updated_at = CURRENT_TIMESTAMP\nWHERE id = {{ $('Find Existing Post').item.json.id }};",
           "options": {}
         },
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
           1100,
-          0
+          -260
         ],
         "id": "88cb8318-164d-40f3-b892-081420eeda19",
         "name": "MySQL",
@@ -503,7 +603,7 @@
         "typeVersion": 1.2,
         "position": [
           1540,
-          0
+          -140
         ],
         "id": "8feec080-c52e-4687-bece-cb286ffa5642",
         "name": "Respond to Webhook"
@@ -518,7 +618,7 @@
         "typeVersion": 2.4,
         "position": [
           1320,
-          0
+          -140
         ],
         "id": "1a9f2e4b-a011-4259-9d05-74d9eeedd8c8",
         "name": "MySQL1",
@@ -532,7 +632,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedStatuses = [\"draft\", \"needs_review\", \"approved\", \"scheduled\", \"publishing\", \"published\", \"failed\", \"cancelled\"];\n\nfunction escapeSql(value) {\n  return String(value ?? \"\").trim().replace(/'/g, \"''\");\n}\n\nfunction positiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireText(field, label) {\n  const value = String(body[field] ?? \"\").trim();\n  if (!value) errors.push(label + \" is required\");\n  return escapeSql(value);\n}\n\nfunction allowedValue(field, label, allowed) {\n  const value = String(body[field] ?? \"\").trim().toLowerCase();\n  if (!allowed.includes(value)) errors.push(label + \" is invalid\");\n  return value;\n}\n\n\nconst customerId = positiveInteger(\"customer_id\", \"Customer ID\");\nconst platform = allowedValue(\"platform\", \"Platform\", allowedPlatforms);\nconst status = allowedValue(\"status\", \"Status\", allowedStatuses);\nconst topic = requireText(\"topic\", \"Topic\");\nlet scheduledAt = String(body.scheduled_at ?? \"\").trim().replace(\"T\", \" \");\n\nif (status === \"scheduled\" && !scheduledAt) {\n  errors.push(\"Scheduled at is required when status is scheduled\");\n}\n\nif (scheduledAt && Number.isNaN(Date.parse(scheduledAt))) {\n  errors.push(\"Scheduled at is invalid\");\n}\n\nscheduledAt = escapeSql(scheduledAt);\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      \n      customer_id: customerId,\n      platform,\n      topic,\n      caption: escapeSql(body.caption),\n      hashtags: escapeSql(body.hashtags),\n      status,\n      scheduled_at: scheduledAt\n    }\n  }\n}];"
+          "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedStatuses = [\"draft\", \"needs_review\", \"approved\", \"scheduled\", \"publishing\", \"published\", \"failed\", \"cancelled\"];\n\nfunction escapeSql(value) {\n  return String(value ?? \"\").trim().replace(/'/g, \"''\");\n}\n\nfunction positiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireText(field, label) {\n  const value = String(body[field] ?? \"\").trim();\n  if (!value) errors.push(label + \" is required\");\n  return escapeSql(value);\n}\n\nfunction allowedValue(field, label, allowed) {\n  const value = String(body[field] ?? \"\").trim().toLowerCase();\n  if (!allowed.includes(value)) errors.push(label + \" is invalid\");\n  return value;\n}\n\n\nconst customerId = positiveInteger(\"customer_id\", \"Customer ID\");\nconst platform = allowedValue(\"platform\", \"Platform\", allowedPlatforms);\nconst status = allowedValue(\"status\", \"Status\", allowedStatuses);\nconst topic = requireText(\"topic\", \"Topic\");\nconst caption = escapeSql(body.caption);\nconst hashtags = escapeSql(body.hashtags);\nlet scheduledAt = String(body.scheduled_at ?? \"\").trim().replace(\"T\", \" \");\n\nif (status === \"scheduled\" && !scheduledAt) {\n  errors.push(\"Scheduled at is required when status is scheduled\");\n}\n\nif (scheduledAt && Number.isNaN(Date.parse(scheduledAt))) {\n  errors.push(\"Scheduled at is invalid\");\n}\n\nscheduledAt = escapeSql(scheduledAt);\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      \n      customer_id: customerId,\n      platform,\n      topic,\n      caption,\n      hashtags,\n      status,\n      scheduled_at: scheduledAt\n    }\n  }\n}];"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -554,7 +654,7 @@
             },
             "conditions": [
               {
-                "id": "valid-create-post",
+                "id": "if-create-post",
                 "leftValue": "={{ $json.valid }}",
                 "rightValue": true,
                 "operator": {
@@ -593,6 +693,84 @@
         ],
         "id": "respond-validation-error-create-post",
         "name": "Respond Validation Error"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT id\nFROM posts\nWHERE customer_id = {{ $('Validate Input').item.json.body.customer_id }}\n  AND platform = '{{ $('Validate Input').item.json.body.platform }}'\n  AND topic = '{{ $('Validate Input').item.json.body.topic }}'\n  AND COALESCE(caption, '') = '{{ $('Validate Input').item.json.body.caption }}'\n  AND COALESCE(hashtags, '') = '{{ $('Validate Input').item.json.body.hashtags }}'\n  AND status = '{{ $('Validate Input').item.json.body.status }}'\n  AND (\n    (scheduled_at IS NULL AND NULLIF('{{ $('Validate Input').item.json.body.scheduled_at }}', '') IS NULL)\n    OR scheduled_at = NULLIF('{{ $('Validate Input').item.json.body.scheduled_at }}', '')\n  )\nORDER BY id DESC\nLIMIT 1;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          660,
+          -140
+        ],
+        "id": "find-existing-post",
+        "name": "Find Existing Post",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mySql": {
+            "id": "BKYkXhg7gKhGGXMN",
+            "name": "MySQL account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "post-exists",
+                "leftValue": "={{ $json.id !== undefined }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          -140
+        ],
+        "id": "post-exists",
+        "name": "Post Exists"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO posts (\n  customer_id,\n  platform,\n  topic,\n  caption,\n  hashtags,\n  status,\n  scheduled_at\n)\nVALUES (\n  {{ $('Validate Input').item.json.body.customer_id }},\n  '{{ $('Validate Input').item.json.body.platform }}',\n  '{{ $('Validate Input').item.json.body.topic }}',\n  '{{ $('Validate Input').item.json.body.caption }}',\n  '{{ $('Validate Input').item.json.body.hashtags }}',\n  '{{ $('Validate Input').item.json.body.status }}',\n  NULLIF('{{ $('Validate Input').item.json.body.scheduled_at }}', '')\n);",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          1100,
+          -20
+        ],
+        "id": "insert-post",
+        "name": "Insert Post",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mySql": {
+            "id": "BKYkXhg7gKhGGXMN",
+            "name": "MySQL account"
+          }
+        }
       }
     ],
     "connections": {
@@ -644,7 +822,7 @@
         "main": [
           [
             {
-              "node": "Validate Input",
+              "node": "Find Existing Post",
               "type": "main",
               "index": 0
             }
@@ -652,6 +830,46 @@
           [
             {
               "node": "Respond Validation Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Existing Post": {
+        "main": [
+          [
+            {
+              "node": "Post Exists",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Post Exists": {
+        "main": [
+          [
+            {
+              "node": "MySQL",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Insert Post",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert Post": {
+        "main": [
+          [
+            {
+              "node": "MySQL1",
               "type": "main",
               "index": 0
             }
@@ -673,7 +891,7 @@
   },
   {
     "createdAt": "2026-04-25T12:43:30.951Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "5V50vxishWDkcU4g",
     "name": "List Workflow Logs",
     "active": true,
@@ -771,7 +989,7 @@
   },
   {
     "createdAt": "2026-04-26T14:27:16.303Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "sXIxjlXQV0iaG7LH",
     "name": "List Scheduled Posts",
     "active": true,
@@ -869,7 +1087,7 @@
   },
   {
     "createdAt": "2026-04-26T14:40:08.367Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "listPostsWorkflowImport",
     "name": "List Posts",
     "active": true,
@@ -967,7 +1185,7 @@
   },
   {
     "createdAt": "2026-04-26T14:45:28.467Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "updatePostWorkflowImport",
     "name": "Update Post",
     "active": true,
@@ -992,14 +1210,14 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "UPDATE posts\nSET\n  customer_id = {{ $json.body.customer_id }},\n  platform = '{{ $json.body.platform }}',\n  topic = '{{ $json.body.topic }}',\n  caption = '{{ $json.body.caption }}',\n  hashtags = '{{ $json.body.hashtags }}',\n  status = '{{ $json.body.status }}',\n  scheduled_at = NULLIF('{{ $json.body.scheduled_at }}', '')\nWHERE id = {{ $json.body.id }};",
+          "query": "UPDATE posts\nSET\n  customer_id = {{ $('Validate Input').item.json.body.customer_id }},\n  platform = '{{ $('Validate Input').item.json.body.platform }}',\n  topic = '{{ $('Validate Input').item.json.body.topic }}',\n  caption = '{{ $('Validate Input').item.json.body.caption }}',\n  hashtags = '{{ $('Validate Input').item.json.body.hashtags }}',\n  status = '{{ $('Validate Input').item.json.body.status }}',\n  scheduled_at = NULLIF('{{ $('Validate Input').item.json.body.scheduled_at }}', '')\nWHERE id = {{ $('Validate Input').item.json.body.id }};",
           "options": {}
         },
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
           1100,
-          0
+          -260
         ],
         "id": "21a0ace3-90e8-49e1-972f-cf742ebae08a",
         "name": "MySQL",
@@ -1021,7 +1239,7 @@
         "typeVersion": 2.4,
         "position": [
           1320,
-          0
+          -260
         ],
         "id": "cae5bc88-35b3-450d-9a0a-6af6d9c52eda",
         "name": "MySQL1",
@@ -1043,14 +1261,14 @@
         "typeVersion": 1.2,
         "position": [
           1540,
-          0
+          -260
         ],
         "id": "6d0aea02-dc55-4c8c-9626-b3f097b6f13e",
         "name": "Respond to Webhook"
       },
       {
         "parameters": {
-          "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedStatuses = [\"draft\", \"needs_review\", \"approved\", \"scheduled\", \"publishing\", \"published\", \"failed\", \"cancelled\"];\n\nfunction escapeSql(value) {\n  return String(value ?? \"\").trim().replace(/'/g, \"''\");\n}\n\nfunction positiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireText(field, label) {\n  const value = String(body[field] ?? \"\").trim();\n  if (!value) errors.push(label + \" is required\");\n  return escapeSql(value);\n}\n\nfunction allowedValue(field, label, allowed) {\n  const value = String(body[field] ?? \"\").trim().toLowerCase();\n  if (!allowed.includes(value)) errors.push(label + \" is invalid\");\n  return value;\n}\n\nconst id = positiveInteger(\"id\", \"Post ID\");\nconst customerId = positiveInteger(\"customer_id\", \"Customer ID\");\nconst platform = allowedValue(\"platform\", \"Platform\", allowedPlatforms);\nconst status = allowedValue(\"status\", \"Status\", allowedStatuses);\nconst topic = requireText(\"topic\", \"Topic\");\nlet scheduledAt = String(body.scheduled_at ?? \"\").trim().replace(\"T\", \" \");\n\nif (status === \"scheduled\" && !scheduledAt) {\n  errors.push(\"Scheduled at is required when status is scheduled\");\n}\n\nif (scheduledAt && Number.isNaN(Date.parse(scheduledAt))) {\n  errors.push(\"Scheduled at is invalid\");\n}\n\nscheduledAt = escapeSql(scheduledAt);\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      id,\n      customer_id: customerId,\n      platform,\n      topic,\n      caption: escapeSql(body.caption),\n      hashtags: escapeSql(body.hashtags),\n      status,\n      scheduled_at: scheduledAt\n    }\n  }\n}];"
+          "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedStatuses = [\"draft\", \"needs_review\", \"approved\", \"scheduled\", \"publishing\", \"published\", \"failed\", \"cancelled\"];\n\nfunction escapeSql(value) {\n  return String(value ?? \"\").trim().replace(/'/g, \"''\");\n}\n\nfunction positiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireText(field, label) {\n  const value = String(body[field] ?? \"\").trim();\n  if (!value) errors.push(label + \" is required\");\n  return escapeSql(value);\n}\n\nfunction allowedValue(field, label, allowed) {\n  const value = String(body[field] ?? \"\").trim().toLowerCase();\n  if (!allowed.includes(value)) errors.push(label + \" is invalid\");\n  return value;\n}\n\nconst id = positiveInteger(\"id\", \"Post ID\");\nconst customerId = positiveInteger(\"customer_id\", \"Customer ID\");\nconst platform = allowedValue(\"platform\", \"Platform\", allowedPlatforms);\nconst status = allowedValue(\"status\", \"Status\", allowedStatuses);\nconst topic = requireText(\"topic\", \"Topic\");\nconst caption = escapeSql(body.caption);\nconst hashtags = escapeSql(body.hashtags);\nlet scheduledAt = String(body.scheduled_at ?? \"\").trim().replace(\"T\", \" \");\n\nif (status === \"scheduled\" && !scheduledAt) {\n  errors.push(\"Scheduled at is required when status is scheduled\");\n}\n\nif (scheduledAt && Number.isNaN(Date.parse(scheduledAt))) {\n  errors.push(\"Scheduled at is invalid\");\n}\n\nscheduledAt = escapeSql(scheduledAt);\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      id,\n      customer_id: customerId,\n      platform,\n      topic,\n      caption,\n      hashtags,\n      status,\n      scheduled_at: scheduledAt\n    }\n  }\n}];"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -1072,7 +1290,7 @@
             },
             "conditions": [
               {
-                "id": "valid-update-post",
+                "id": "if-update-post",
                 "leftValue": "={{ $json.valid }}",
                 "rightValue": true,
                 "operator": {
@@ -1111,6 +1329,79 @@
         ],
         "id": "respond-validation-error-update-post",
         "name": "Respond Validation Error"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT id\nFROM posts\nWHERE id = {{ $('Validate Input').item.json.body.id }}\nLIMIT 1;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          660,
+          -140
+        ],
+        "id": "find-post-by-id",
+        "name": "Find Post By Id",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mySql": {
+            "id": "BKYkXhg7gKhGGXMN",
+            "name": "MySQL account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "post-found",
+                "leftValue": "={{ $json.id !== undefined }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          -140
+        ],
+        "id": "post-found",
+        "name": "Post Found"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { success: false, message: \"Post not found\", error: \"The requested post does not exist\" } }}",
+          "options": {
+            "responseCode": 404
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.2,
+        "position": [
+          1100,
+          20
+        ],
+        "id": "respond-post-not-found",
+        "name": "Respond Not Found"
       }
     ],
     "connections": {
@@ -1162,7 +1453,7 @@
         "main": [
           [
             {
-              "node": "Validate Input",
+              "node": "Find Post By Id",
               "type": "main",
               "index": 0
             }
@@ -1170,6 +1461,35 @@
           [
             {
               "node": "Respond Validation Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Post By Id": {
+        "main": [
+          [
+            {
+              "node": "Post Found",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Post Found": {
+        "main": [
+          [
+            {
+              "node": "MySQL",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond Not Found",
               "type": "main",
               "index": 0
             }
@@ -1191,7 +1511,7 @@
   },
   {
     "createdAt": "2026-04-26T14:57:51.744Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "listCustomersWorkflowImport",
     "name": "List Customers",
     "active": true,
@@ -1289,7 +1609,7 @@
   },
   {
     "createdAt": "2026-04-26T14:57:51.746Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "getCustomerDetailWorkflowImport",
     "name": "Get Customer Detail",
     "active": true,
@@ -1314,13 +1634,13 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "SELECT id, name, email, company_name, industry, created_at, updated_at\nFROM customers\nWHERE id = {{ $json.body.customer_id }}\nLIMIT 1;",
+          "query": "SELECT id, name, email, company_name, industry, created_at, updated_at\nFROM customers\nWHERE id = {{ $('Validate Input').item.json.body.customer_id }}\nLIMIT 1;",
           "options": {}
         },
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
-          1100,
+          1540,
           0
         ],
         "id": "d21096f4-b485-403b-9d0f-18b013754314",
@@ -1342,7 +1662,7 @@
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
-          1320,
+          1760,
           0
         ],
         "id": "c92e0d6c-d7fa-42b2-a587-08f36ffa1cae",
@@ -1364,7 +1684,7 @@
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
-          1540,
+          1980,
           0
         ],
         "id": "d8b7a1e5-485f-4696-90d0-a79caf0fdb7e",
@@ -1386,7 +1706,7 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1.2,
         "position": [
-          1760,
+          2200,
           0
         ],
         "id": "6dbcf3f7-80e3-490c-892b-c6d61fa11281",
@@ -1416,7 +1736,7 @@
             },
             "conditions": [
               {
-                "id": "valid-get-customer-detail",
+                "id": "if-get-customer-detail",
                 "leftValue": "={{ $json.valid }}",
                 "rightValue": true,
                 "operator": {
@@ -1512,24 +1832,6 @@
             }
           ]
         ]
-      },
-      "Is Valid": {
-        "main": [
-          [
-            {
-              "node": "Validate Input",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Respond Validation Error",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
       }
     },
     "settings": {
@@ -1546,7 +1848,7 @@
   },
   {
     "createdAt": "2026-04-26T14:57:51.746Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "listBrandProfilesWorkflowImport",
     "name": "List Brand Profiles",
     "active": true,
@@ -1644,7 +1946,7 @@
   },
   {
     "createdAt": "2026-04-26T14:57:51.746Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "updateBrandProfileWorkflowImport",
     "name": "Update Brand Profile",
     "active": true,
@@ -1669,14 +1971,14 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "UPDATE brand_profiles\nSET\n  customer_id = {{ $json.body.customer_id }},\n  brand_name = '{{ $json.body.brand_name }}',\n  target_audience = '{{ $json.body.target_audience }}',\n  brand_voice = '{{ $json.body.brand_voice }}',\n  products_services = '{{ $json.body.products_services }}',\n  default_cta = '{{ $json.body.default_cta }}',\n  words_to_use = '{{ $json.body.words_to_use }}',\n  words_to_avoid = '{{ $json.body.words_to_avoid }}'\nWHERE id = {{ $json.body.id }};",
+          "query": "UPDATE brand_profiles\nSET\n  customer_id = {{ $('Validate Input').item.json.body.customer_id }},\n  brand_name = '{{ $('Validate Input').item.json.body.brand_name }}',\n  target_audience = '{{ $('Validate Input').item.json.body.target_audience }}',\n  brand_voice = '{{ $('Validate Input').item.json.body.brand_voice }}',\n  products_services = '{{ $('Validate Input').item.json.body.products_services }}',\n  default_cta = '{{ $('Validate Input').item.json.body.default_cta }}',\n  words_to_use = '{{ $('Validate Input').item.json.body.words_to_use }}',\n  words_to_avoid = '{{ $('Validate Input').item.json.body.words_to_avoid }}'\nWHERE id = {{ $('Validate Input').item.json.body.id }};",
           "options": {}
         },
         "type": "n8n-nodes-base.mySql",
         "typeVersion": 2.4,
         "position": [
           1100,
-          0
+          -260
         ],
         "id": "c92826fa-4079-4463-8fda-924328e17450",
         "name": "MySQL",
@@ -1698,7 +2000,7 @@
         "typeVersion": 2.4,
         "position": [
           1320,
-          0
+          -260
         ],
         "id": "c96e6a52-4466-4fa3-be44-56f7c3fc66a0",
         "name": "MySQL1",
@@ -1720,7 +2022,7 @@
         "typeVersion": 1.2,
         "position": [
           1540,
-          0
+          -260
         ],
         "id": "5c2dca9e-9e72-46f3-a711-1163c6b9fe81",
         "name": "Respond to Webhook"
@@ -1749,7 +2051,7 @@
             },
             "conditions": [
               {
-                "id": "valid-update-brand-profile",
+                "id": "if-update-brand-profile",
                 "leftValue": "={{ $json.valid }}",
                 "rightValue": true,
                 "operator": {
@@ -1788,6 +2090,79 @@
         ],
         "id": "respond-validation-error-update-brand-profile",
         "name": "Respond Validation Error"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT id\nFROM brand_profiles\nWHERE id = {{ $('Validate Input').item.json.body.id }}\nLIMIT 1;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.4,
+        "position": [
+          660,
+          -140
+        ],
+        "id": "find-brand-profile-by-id",
+        "name": "Find Brand Profile By Id",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mySql": {
+            "id": "BKYkXhg7gKhGGXMN",
+            "name": "MySQL account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "brand-profile-found",
+                "leftValue": "={{ $json.id !== undefined }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          -140
+        ],
+        "id": "brand-profile-found",
+        "name": "Brand Profile Found"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { success: false, message: \"Brand profile not found\", error: \"The requested brand profile does not exist\" } }}",
+          "options": {
+            "responseCode": 404
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.2,
+        "position": [
+          1100,
+          20
+        ],
+        "id": "respond-brand-profile-not-found",
+        "name": "Respond Not Found"
       }
     ],
     "connections": {
@@ -1839,7 +2214,7 @@
         "main": [
           [
             {
-              "node": "Validate Input",
+              "node": "Find Brand Profile By Id",
               "type": "main",
               "index": 0
             }
@@ -1847,6 +2222,35 @@
           [
             {
               "node": "Respond Validation Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Brand Profile By Id": {
+        "main": [
+          [
+            {
+              "node": "Brand Profile Found",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Brand Profile Found": {
+        "main": [
+          [
+            {
+              "node": "MySQL",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond Not Found",
               "type": "main",
               "index": 0
             }
@@ -1868,7 +2272,7 @@
   },
   {
     "createdAt": "2026-04-26T14:57:51.746Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "runScheduleSimulationWorkflowImport",
     "name": "Run Schedule Simulation",
     "active": true,
@@ -1999,7 +2403,7 @@
   },
   {
     "createdAt": "2026-04-26T14:57:51.746Z",
-    "updatedAt": "2026-04-26T15:11:51.000Z",
+    "updatedAt": "2026-04-26T15:36:56.000Z",
     "id": "dashboardSummaryWorkflowImport",
     "name": "Dashboard Summary",
     "active": true,
