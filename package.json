@@ -1,0 +1,12 @@
+{
+  "name": "ai-social-saas",
+  "private": true,
+  "scripts": {
+    "dev:web": "cd apps/web && npm run dev",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs:n8n": "docker logs -f ai_social_n8n",
+    "docker:logs:mysql": "docker logs -f ai_social_mysql"
+  }
+}
+
