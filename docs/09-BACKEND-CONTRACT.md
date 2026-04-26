@@ -51,12 +51,12 @@ email
 
 ### Error response
 
-Use this shape later:
+Current standardized shape:
 
 ```json
 {
   "success": false,
-  "message": "Failed to save customer",
+  "message": "Validation failed",
   "error": "Reason here"
 }
 ```

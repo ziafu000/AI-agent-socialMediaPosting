@@ -133,6 +133,35 @@ not:
 /webhook-test/create-customer
 ```
 
+## n8n returns validation failed
+
+Expected response shape:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": "Reason here"
+}
+```
+
+Typical causes:
+
+- missing required field
+- invalid email format
+- `customer_id` or `id` is not a positive number
+- post status is `scheduled` but `scheduled_at` is empty
+
+Fix:
+
+- check the frontend payload first
+- confirm imported workflows were reactivated after import
+- if needed, regenerate the patched workflow export with:
+
+```text
+npm run n8n:workflows:patch-validation
+```
+
 ## Credentials broke after restart
 
 If n8n credentials cannot be decrypted, check whether `N8N_ENCRYPTION_KEY` changed.

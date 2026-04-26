@@ -1,17 +1,33 @@
 # 07 — n8n Workflows
 
-## Current workflow
+## Current workflow scope
 
-Workflow name:
+Active local workflows now include:
+
+- `Create Customer`
+- `Save Brand Profile`
+- `Create Post`
+- `Update Brand Profile`
+- `Update Post`
+- `List Customers`
+- `Get Customer Detail`
+- `List Brand Profiles`
+- `List Posts`
+- `List Scheduled Posts`
+- `List Workflow Logs`
+- `Run Schedule Simulation`
+- `Dashboard Summary`
+
+The exported local workflow state is tracked in:
 
 ```text
-Create Customer
+n8n/workflows/local-active-workflows.json
 ```
 
-Purpose:
+The validation-patched export is generated into:
 
 ```text
-Receive customer form data from frontend and insert it into MySQL.
+n8n/workflows/local-active-workflows.validation.json
 ```
 
 ## Workflow diagram
@@ -128,15 +144,42 @@ Response body:
 }
 ```
 
-## Validation rules for this workflow
+## Validation and error handling
 
-The workflow should reject or fail clearly if:
+Validation is now active on the main input workflows:
 
-- `name` is missing
-- `email` is missing
-- email format is invalid
+- `Create Customer`
+- `Save Brand Profile`
+- `Create Post`
+- `Update Brand Profile`
+- `Update Post`
+- `Get Customer Detail`
 
-For the first skeleton, this validation may be done later.
+Current behavior:
+
+- invalid input returns HTTP `400`
+- response shape is standardized:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": "Reason here"
+}
+```
+
+- import/export patch helper:
+
+```text
+node scripts/patch-n8n-validation.mjs n8n/workflows/local-active-workflows.json n8n/workflows/local-active-workflows.validation.json
+```
+
+- after importing workflows, reactivate all and restart n8n:
+
+```text
+docker exec ai_social_n8n n8n update:workflow --all --active=true
+docker restart ai_social_n8n
+```
 
 ## Future workflows
 

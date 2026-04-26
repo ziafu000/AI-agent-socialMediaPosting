@@ -45,3 +45,23 @@ Frontend form submit
 → n8n inserts customer into MySQL
 → DBeaver shows the inserted customer
 ```
+
+## Current local status
+
+Implemented:
+
+- Phase 0 local skeleton
+- Brand profile management
+- Post draft management
+- Scheduling simulation
+- Workflow logs
+- Customers list and detail
+- Dashboard summary
+- Validation and error handling
+
+Validation and error handling currently includes:
+
+- frontend payload validation before calling n8n
+- standardized error shape: `{ success: false, message, error }`
+- n8n validation gates on create and update workflows
+- exported local n8n workflows tracked in `n8n/workflows/`

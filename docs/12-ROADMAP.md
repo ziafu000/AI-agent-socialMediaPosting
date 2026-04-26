@@ -130,3 +130,20 @@ Tasks:
 - Add usage limits
 - Add payment provider
 - Add billing page
+
+## Current completed milestones
+
+Completed locally:
+
+- Phase 0 local skeleton
+- Phase 1 brand profile management
+- Phase 2 post draft management
+- Phase 4 scheduling simulation
+- workflow logs
+- customers list and detail
+- dashboard summary
+- validation and error handling
+
+Next recommended milestone:
+
+- data consistency cleanup
