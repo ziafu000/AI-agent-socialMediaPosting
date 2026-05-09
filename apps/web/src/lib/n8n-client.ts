@@ -373,6 +373,61 @@ export async function generateCaption(payload: GenerateCaptionPayload) {
   );
 }
 
+export type RewriteCaptionStyle =
+  | "shorter"
+  | "more_engaging"
+  | "more_professional"
+  | "more_sales_focused";
+
+export type RewriteCaptionPayload = GenerateCaptionPayload & {
+  current_caption: string;
+  current_hashtags: string;
+  rewrite_style: RewriteCaptionStyle;
+};
+
+export type RewriteCaptionResponse = GenerateCaptionResponse;
+
+export async function rewriteCaption(payload: RewriteCaptionPayload) {
+  return postToN8n(
+    process.env.NEXT_PUBLIC_N8N_REWRITE_CAPTION_WEBHOOK_URL,
+    {
+      customer_id: requirePositiveInteger(payload.customer_id, "Customer ID"),
+      brand_profile_id: requirePositiveInteger(
+        payload.brand_profile_id,
+        "Brand profile ID",
+      ),
+      brand_name: requireText(payload.brand_name, "Brand name"),
+      target_audience: optionalText(payload.target_audience),
+      brand_voice: optionalText(payload.brand_voice),
+      default_cta: optionalText(payload.default_cta),
+      words_to_use: optionalText(payload.words_to_use),
+      platform: requireAllowedValue(
+        payload.platform,
+        "Platform",
+        allowedPlatforms,
+      ),
+      topic: requireText(payload.topic, "Topic"),
+      content_pillar: requireText(
+        payload.content_pillar,
+        "Content pillar",
+      ).toLowerCase(),
+      goal: requireText(payload.goal, "Goal").toLowerCase(),
+      campaign: optionalText(payload.campaign),
+      offer: optionalText(payload.offer),
+      call_to_action: optionalText(payload.call_to_action),
+      current_caption: requireText(payload.current_caption, "Current caption"),
+      current_hashtags: optionalText(payload.current_hashtags),
+      rewrite_style: requireAllowedValue(payload.rewrite_style, "Rewrite style", [
+        "shorter",
+        "more_engaging",
+        "more_professional",
+        "more_sales_focused",
+      ]) as RewriteCaptionStyle,
+    },
+    "Failed to rewrite caption",
+  );
+}
+
 export type UpdatePostPayload = {
   id: number;
   customer_id: number;

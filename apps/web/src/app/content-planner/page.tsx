@@ -11,6 +11,8 @@ import {
   generateContentIdeas,
   listBrandProfiles,
   listCustomers,
+  rewriteCaption,
+  RewriteCaptionStyle,
 } from "@/lib/n8n-client";
 
 type CustomersResponse = {
@@ -55,6 +57,13 @@ type GeneratedCaptionResponse = {
   caption: string;
   hashtags: string;
 };
+
+const rewriteStyleOptions: { label: string; value: RewriteCaptionStyle }[] = [
+  { label: "Shorter", value: "shorter" },
+  { label: "More engaging", value: "more_engaging" },
+  { label: "More professional", value: "more_professional" },
+  { label: "More sales-focused", value: "more_sales_focused" },
+];
 
 const initialFormState: PlannerForm = {
   customerId: "",
@@ -173,6 +182,9 @@ export default function ContentPlannerPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [captionIdeaId, setCaptionIdeaId] = useState("");
+  const [rewriteIdeaId, setRewriteIdeaId] = useState("");
+  const [rewriteStyle, setRewriteStyle] =
+    useState<RewriteCaptionStyle>("shorter");
   const [error, setError] = useState("");
   const [result, setResult] = useState<unknown>(null);
 
@@ -540,6 +552,79 @@ export default function ContentPlannerPage() {
     }
   }
 
+  async function rewriteCaptionForIdea(idea: DraftIdea) {
+    const customerId = Number(form.customerId);
+    const brandProfileId = Number(form.brandProfileId);
+
+    if (!Number.isInteger(customerId) || customerId < 1) {
+      setError("Select a valid customer before rewriting a caption");
+      return;
+    }
+
+    if (!Number.isInteger(brandProfileId) || brandProfileId < 1 || !selectedProfile) {
+      setError("Select a valid brand profile before rewriting a caption");
+      return;
+    }
+
+    if (!idea.caption.trim()) {
+      setError("Add or generate a caption before rewriting it");
+      return;
+    }
+
+    setRewriteIdeaId(idea.id);
+    setError("");
+    setResult(null);
+
+    try {
+      const response = (await rewriteCaption({
+        customer_id: customerId,
+        brand_profile_id: brandProfileId,
+        brand_name: selectedProfile.brand_name,
+        target_audience: selectedProfile.target_audience,
+        brand_voice: selectedProfile.brand_voice,
+        default_cta: selectedProfile.default_cta,
+        words_to_use: selectedProfile.words_to_use,
+        platform: idea.platform,
+        topic: idea.topic,
+        content_pillar: idea.pillar,
+        goal: idea.goal,
+        campaign: form.campaign,
+        offer: form.offer,
+        call_to_action: form.callToAction,
+        current_caption: idea.caption,
+        current_hashtags: idea.hashtags,
+        rewrite_style: rewriteStyle,
+      })) as GeneratedCaptionResponse;
+
+      setIdeas((currentIdeas) =>
+        currentIdeas.map((currentIdea) =>
+          currentIdea.id === idea.id
+            ? {
+                ...currentIdea,
+                caption: response.caption,
+                hashtags: response.hashtags || currentIdea.hashtags,
+              }
+            : currentIdea,
+        ),
+      );
+
+      setResult({
+        success: true,
+        message: "Caption rewritten successfully",
+        idea_id: idea.id,
+        rewrite_style: rewriteStyle,
+      });
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unexpected error while rewriting caption",
+      );
+    } finally {
+      setRewriteIdeaId("");
+    }
+  }
+
   async function saveSelectedIdeas() {
     const customerId = Number(form.customerId);
     const selectedIdeas = ideas.filter((idea) => idea.selected);
@@ -822,8 +907,8 @@ export default function ContentPlannerPage() {
               </h2>
               <p className="mt-2 text-sm text-slate-600">
                 Review the generated angles, adjust the wording, then save the selected
-                items as `needs_review` post drafts. You can also regenerate a caption
-                on each idea card.
+                items as `needs_review` post drafts. You can also generate or
+                rewrite a caption on each idea card.
               </p>
             </div>
             <button
@@ -844,7 +929,7 @@ export default function ContentPlannerPage() {
             </pre>
           )}
 
-          {result && (
+          {Boolean(result) && (
             <pre className="mb-4 overflow-auto rounded-md bg-emerald-50 p-4 text-sm text-emerald-900">
               {JSON.stringify(result, null, 2)}
             </pre>
@@ -918,16 +1003,43 @@ export default function ContentPlannerPage() {
                     <span className="text-sm font-medium text-slate-700">
                       Caption brief
                     </span>
-                    <button
-                      className="mt-2 rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400"
-                      disabled={captionIdeaId === idea.id}
-                      type="button"
-                      onClick={() => generateCaptionForIdea(idea)}
-                    >
-                      {captionIdeaId === idea.id
-                        ? "Generating caption..."
-                        : "Generate caption"}
-                    </button>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <button
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400"
+                        disabled={captionIdeaId === idea.id}
+                        type="button"
+                        onClick={() => generateCaptionForIdea(idea)}
+                      >
+                        {captionIdeaId === idea.id
+                          ? "Generating caption..."
+                          : "Generate caption"}
+                      </button>
+                      <select
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 outline-none focus:border-slate-900"
+                        value={rewriteStyle}
+                        onChange={(event) =>
+                          setRewriteStyle(
+                            event.target.value as RewriteCaptionStyle,
+                          )
+                        }
+                      >
+                        {rewriteStyleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400"
+                        disabled={rewriteIdeaId === idea.id}
+                        type="button"
+                        onClick={() => rewriteCaptionForIdea(idea)}
+                      >
+                        {rewriteIdeaId === idea.id
+                          ? "Rewriting..."
+                          : "Rewrite caption"}
+                      </button>
+                    </div>
                     <textarea
                       className="mt-2 min-h-28 w-full rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
                       value={idea.caption}
