@@ -1,0 +1,159 @@
+{
+  "name": "Rewrite Caption",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rewrite-caption",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-rewrite-caption",
+      "name": "Webhook",
+      "webhookId": "5a9ef6f0-8ac8-4421-930c-2e5691fbdbd3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedStyles = [\"shorter\", \"more_engaging\", \"more_professional\", \"more_sales_focused\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireText(field, label) {\n  const value = String(body[field] ?? \"\").trim();\n  if (!value) errors.push(label + \" is required\");\n  return value;\n}\n\nfunction optionalText(field) {\n  return String(body[field] ?? \"\").trim();\n}\n\nconst customerId = requirePositiveInteger(\"customer_id\", \"Customer ID\");\nconst brandProfileId = requirePositiveInteger(\"brand_profile_id\", \"Brand profile ID\");\nconst brandName = requireText(\"brand_name\", \"Brand name\");\nconst platform = requireText(\"platform\", \"Platform\").toLowerCase();\nconst topic = requireText(\"topic\", \"Topic\");\nconst contentPillar = requireText(\"content_pillar\", \"Content pillar\").toLowerCase();\nconst goal = requireText(\"goal\", \"Goal\").toLowerCase();\nconst currentCaption = requireText(\"current_caption\", \"Current caption\");\nconst rewriteStyle = requireText(\"rewrite_style\", \"Rewrite style\").toLowerCase();\n\nif (!allowedPlatforms.includes(platform)) {\n  errors.push(\"Platform is invalid\");\n}\n\nif (!allowedStyles.includes(rewriteStyle)) {\n  errors.push(\"Rewrite style is invalid\");\n}\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      customer_id: customerId,\n      brand_profile_id: brandProfileId,\n      brand_name: brandName,\n      target_audience: optionalText(\"target_audience\"),\n      brand_voice: optionalText(\"brand_voice\"),\n      default_cta: optionalText(\"default_cta\"),\n      words_to_use: optionalText(\"words_to_use\"),\n      platform,\n      topic,\n      content_pillar: contentPillar,\n      goal,\n      campaign: optionalText(\"campaign\"),\n      offer: optionalText(\"offer\"),\n      call_to_action: optionalText(\"call_to_action\"),\n      current_caption: currentCaption,\n      current_hashtags: optionalText(\"current_hashtags\"),\n      rewrite_style: rewriteStyle\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "validate-rewrite-caption",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-rewrite-caption",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0],
+      "id": "if-rewrite-caption",
+      "name": "Is Valid"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\n\nfunction buildHashtagSeed(input) {\n  return String(input ?? \"\")\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .split(/\\s+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((word) => `#${word}`)\n    .join(\" \");\n}\n\nfunction compactText(value) {\n  return String(value ?? \"\").replace(/\\s+/g, \" \").trim();\n}\n\nconst styleLabels = {\n  shorter: \"Shorter rewrite\",\n  more_engaging: \"More engaging rewrite\",\n  more_professional: \"More professional rewrite\",\n  more_sales_focused: \"More sales-focused rewrite\"\n};\n\nconst cta = body.call_to_action || body.default_cta || \"Send a message to learn more\";\nconst campaign = body.campaign || body.brand_name;\nconst offer = body.offer || \"your offer\";\nconst voice = body.brand_voice || \"clear\";\nconst audience = body.target_audience || \"your audience\";\nconst baseCaption = compactText(body.current_caption);\n\nconst rewrites = {\n  shorter: `${body.brand_name}: ${body.topic}. ${cta}.`,\n  more_engaging: `${body.topic}? Here is the practical angle for ${audience}: ${baseCaption} What would you add? ${cta}.`,\n  more_professional: `${body.brand_name} shares a ${voice} perspective on ${body.topic}. The key message connects ${campaign} with ${offer}. ${cta}.`,\n  more_sales_focused: `If ${body.topic} is relevant to you, ${offer} may be the next step. ${baseCaption} ${cta}.`\n};\n\nconst caption = `${styleLabels[body.rewrite_style]} | ${rewrites[body.rewrite_style]}`;\nconst hashtags = [\n  body.current_hashtags,\n  buildHashtagSeed(body.platform),\n  buildHashtagSeed(body.content_pillar),\n  buildHashtagSeed(campaign)\n].filter(Boolean).join(\" \");\n\nreturn [{ json: { success: true, caption, hashtags } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -120],
+      "id": "rewrite-stub-caption",
+      "name": "Rewrite Stub Caption"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [880, -120],
+      "id": "respond-rewrite-caption",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [660, 220],
+      "id": "respond-validation-error-rewrite-caption",
+      "name": "Respond Validation Error"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid": {
+      "main": [
+        [
+          {
+            "node": "Rewrite Stub Caption",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rewrite Stub Caption": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": []
+}

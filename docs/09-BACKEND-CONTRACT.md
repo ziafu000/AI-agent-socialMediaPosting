@@ -288,6 +288,53 @@ Behavior:
 
 ## Contract 9 - Dedicated Schedule Post
 
+## Contract 9 - Rewrite Caption
+
+Implemented as a stub-compatible production contract.
+
+Current endpoint:
+
+```text
+POST http://localhost:5678/webhook/rewrite-caption
+```
+
+Current request body extends `Generate Caption` with:
+
+```json
+{
+  "current_caption": "Existing caption text",
+  "current_hashtags": "#facebook #education",
+  "rewrite_style": "shorter"
+}
+```
+
+Allowed `rewrite_style` values:
+
+```text
+shorter
+more_engaging
+more_professional
+more_sales_focused
+```
+
+Current response:
+
+```json
+{
+  "success": true,
+  "caption": "Rewritten caption text here",
+  "hashtags": "#facebook #education"
+}
+```
+
+Behavior:
+
+- the current workflow returns deterministic stub rewrite data through one generator node
+- later production swap should replace only that generator node with a real model node
+- the content planner updates only the selected idea card when rewrite succeeds
+
+## Contract 10 - Dedicated Schedule Post
+
 Not implemented yet.
 
 Scheduling currently exists through `create-post` and `update-post` by setting

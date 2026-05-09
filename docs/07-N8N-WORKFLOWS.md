@@ -22,6 +22,7 @@ An additional importable stub workflow now exists for AI generation prototyping:
 
 - `n8n/workflows/generate-content-ideas-stub-workflow.json`
 - `n8n/workflows/generate-caption-stub-workflow.json`
+- `n8n/workflows/rewrite-caption-stub-workflow.json`
 
 The exported local workflow state is tracked in:
 
@@ -233,6 +234,21 @@ Webhook -> Validate Input -> Generate Stub Caption -> Respond to Webhook
 ```
 
 The `Generate Stub Caption` node is the only node that should need to change
+when moving from stub output to a real model API.
+
+### Rewrite Caption
+
+```text
+POST /webhook/rewrite-caption
+```
+
+The current intended implementation path is:
+
+```text
+Webhook -> Validate Input -> Rewrite Stub Caption -> Respond to Webhook
+```
+
+The `Rewrite Stub Caption` node is the only node that should need to change
 when moving from stub output to a real model API.
 
 ### Schedule Post
