@@ -172,7 +172,7 @@ export default function PostsPage() {
 
           <label className="block">
             <span className="text-sm font-medium text-slate-700">
-              Scheduled at
+              Scheduled at (GMT+7)
             </span>
             <input
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"

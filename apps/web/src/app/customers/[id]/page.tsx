@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { formatDateTime } from "@/lib/datetime";
 import {
   BrandProfileRecord,
   CustomerRecord,
@@ -102,7 +103,9 @@ export default function CustomerDetailPage() {
                 </div>
                 <div>
                   <dt className="font-medium text-slate-500">Created</dt>
-                  <dd className="text-slate-900">{customer.created_at}</dd>
+                  <dd className="text-slate-900">
+                    {formatDateTime(customer.created_at)}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -184,7 +187,7 @@ export default function CustomerDetailPage() {
                           </td>
                           <td className="px-3 py-2">{post.status}</td>
                           <td className="px-3 py-2">
-                            {post.scheduled_at ?? ""}
+                            {formatDateTime(post.scheduled_at)}
                           </td>
                         </tr>
                       ))

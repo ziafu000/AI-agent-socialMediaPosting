@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/datetime";
 import {
   CustomerRecord,
   DashboardSummary,
@@ -55,6 +56,11 @@ const quickLinks = [
     href: "/schedule-simulator",
     label: "Simulator",
     description: "Run schedule simulation",
+  },
+  {
+    href: "/content-planner",
+    label: "Planner",
+    description: "Turn brand context into manual post ideas",
   },
 ];
 
@@ -285,8 +291,8 @@ export default function DashboardPage() {
                         </div>
                         <div className="mt-2 text-xs text-slate-500">
                           {post.scheduled_at
-                            ? `Scheduled ${post.scheduled_at}`
-                            : `Created ${post.created_at}`}
+                            ? `Scheduled ${formatDateTime(post.scheduled_at)}`
+                            : `Created ${formatDateTime(post.created_at)}`}
                         </div>
                       </Link>
                     ))
@@ -337,7 +343,7 @@ export default function DashboardPage() {
                           {log.event_type}
                         </div>
                         <div className="mt-2 text-xs text-slate-500">
-                          {log.created_at}
+                          {formatDateTime(log.created_at)}
                         </div>
                         {log.error_message && (
                           <div className="mt-2 text-xs text-red-700">

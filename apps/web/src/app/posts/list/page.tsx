@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/datetime";
 import { listPosts, PostRecord } from "@/lib/n8n-client";
 
 type PostsResponse = {
@@ -158,8 +159,12 @@ export default function PostsListPage() {
                       </Link>
                     </td>
                     <td className="px-3 py-2">{post.status}</td>
-                    <td className="px-3 py-2">{post.scheduled_at ?? ""}</td>
-                    <td className="px-3 py-2">{post.created_at}</td>
+                    <td className="px-3 py-2">
+                      {formatDateTime(post.scheduled_at)}
+                    </td>
+                    <td className="px-3 py-2">
+                      {formatDateTime(post.created_at)}
+                    </td>
                   </tr>
                 ))
               )}

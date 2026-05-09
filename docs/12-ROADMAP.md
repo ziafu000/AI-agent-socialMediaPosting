@@ -139,12 +139,14 @@ Completed locally:
 - Phase 1 brand profile management
 - Phase 2 post draft management
 - Phase 4 scheduling simulation
+- content planning without AI
 - workflow logs
 - customers list and detail
 - dashboard summary
+- dashboard polish
 - validation and error handling
 - data consistency cleanup
 
 Next recommended milestone:
 
-- dashboard polish
+- Phase 3 AI content generation

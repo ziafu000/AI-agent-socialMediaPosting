@@ -1,0 +1,159 @@
+{
+  "name": "Generate Caption",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-caption",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-generate-caption",
+      "name": "Webhook",
+      "webhookId": "c2694051-5820-44b2-b015-a060292c0d8c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireText(field, label) {\n  const value = String(body[field] ?? \"\").trim();\n  if (!value) errors.push(label + \" is required\");\n  return value;\n}\n\nfunction optionalText(field) {\n  return String(body[field] ?? \"\").trim();\n}\n\nconst customerId = requirePositiveInteger(\"customer_id\", \"Customer ID\");\nconst brandProfileId = requirePositiveInteger(\"brand_profile_id\", \"Brand profile ID\");\nconst brandName = requireText(\"brand_name\", \"Brand name\");\nconst platform = requireText(\"platform\", \"Platform\").toLowerCase();\nconst topic = requireText(\"topic\", \"Topic\");\nconst contentPillar = requireText(\"content_pillar\", \"Content pillar\").toLowerCase();\nconst goal = requireText(\"goal\", \"Goal\").toLowerCase();\n\nif (!allowedPlatforms.includes(platform)) {\n  errors.push(\"Platform is invalid\");\n}\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      customer_id: customerId,\n      brand_profile_id: brandProfileId,\n      brand_name: brandName,\n      target_audience: optionalText(\"target_audience\"),\n      brand_voice: optionalText(\"brand_voice\"),\n      default_cta: optionalText(\"default_cta\"),\n      words_to_use: optionalText(\"words_to_use\"),\n      platform,\n      topic,\n      content_pillar: contentPillar,\n      goal,\n      campaign: optionalText(\"campaign\"),\n      offer: optionalText(\"offer\"),\n      call_to_action: optionalText(\"call_to_action\")\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "validate-generate-caption",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-generate-caption",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0],
+      "id": "if-generate-caption",
+      "name": "Is Valid"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\n\nfunction buildHashtagSeed(input) {\n  return String(input ?? \"\")\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .split(/\\s+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((word) => `#${word}`)\n    .join(\" \");\n}\n\nconst audience = body.target_audience || \"your audience\";\nconst voice = body.brand_voice || \"clear\";\nconst callToAction = body.call_to_action || body.default_cta || \"Send a message to learn more\";\nconst preferredWords = body.words_to_use || body.brand_name;\nconst campaign = body.campaign || body.brand_name;\nconst offer = body.offer || \"your offer\";\n\nconst caption = [\n  `${body.brand_name} | ${body.platform.toUpperCase()}`,\n  `Topic: ${body.topic}.`,\n  `Angle: ${body.content_pillar} with goal ${body.goal}.`,\n  `Write for ${audience} in a ${voice} voice.`,\n  `Connect the message to ${campaign} and ${offer}.`,\n  `Use language such as ${preferredWords}.`,\n  `CTA: ${callToAction}.`\n].join(' ');\n\nconst hashtags = [\n  buildHashtagSeed(body.platform),\n  buildHashtagSeed(body.content_pillar),\n  buildHashtagSeed(campaign)\n].filter(Boolean).join(' ');\n\nreturn [{ json: { success: true, caption, hashtags } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -120],
+      "id": "generate-stub-caption",
+      "name": "Generate Stub Caption"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [880, -120],
+      "id": "respond-generate-caption",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [660, 220],
+      "id": "respond-validation-error-generate-caption",
+      "name": "Respond Validation Error"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid": {
+      "main": [
+        [
+          {
+            "node": "Generate Stub Caption",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Stub Caption": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": []
+}

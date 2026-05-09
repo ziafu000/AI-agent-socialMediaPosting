@@ -272,6 +272,107 @@ export async function createPost(payload: CreatePostPayload) {
   );
 }
 
+export type GenerateContentIdeasPayload = {
+  customer_id: number;
+  brand_profile_id: number;
+  platforms: string[];
+  content_pillars: string[];
+  number_of_posts: number;
+  campaign: string;
+  offer: string;
+  call_to_action: string;
+};
+
+export type GeneratedContentIdea = {
+  platform: string;
+  topic: string;
+  content_pillar: string;
+  goal: string;
+  caption: string;
+  hashtags: string;
+};
+
+export async function generateContentIdeas(
+  payload: GenerateContentIdeasPayload,
+) {
+  return postToN8n(
+    process.env.NEXT_PUBLIC_N8N_GENERATE_CONTENT_IDEAS_WEBHOOK_URL,
+    {
+      customer_id: requirePositiveInteger(payload.customer_id, "Customer ID"),
+      brand_profile_id: requirePositiveInteger(
+        payload.brand_profile_id,
+        "Brand profile ID",
+      ),
+      platforms: payload.platforms.map((platform) =>
+        requireAllowedValue(platform, "Platform", allowedPlatforms),
+      ),
+      content_pillars: payload.content_pillars.map((pillar) =>
+        requireText(pillar, "Content pillar").toLowerCase(),
+      ),
+      number_of_posts: requirePositiveInteger(
+        payload.number_of_posts,
+        "Number of posts",
+      ),
+      campaign: optionalText(payload.campaign),
+      offer: optionalText(payload.offer),
+      call_to_action: optionalText(payload.call_to_action),
+    },
+    "Failed to generate content ideas",
+  );
+}
+
+export type GenerateCaptionPayload = {
+  customer_id: number;
+  brand_profile_id: number;
+  brand_name: string;
+  target_audience: string;
+  brand_voice: string;
+  default_cta: string;
+  words_to_use: string;
+  platform: string;
+  topic: string;
+  content_pillar: string;
+  goal: string;
+  campaign: string;
+  offer: string;
+  call_to_action: string;
+};
+
+export type GenerateCaptionResponse = {
+  success: boolean;
+  caption: string;
+  hashtags: string;
+};
+
+export async function generateCaption(payload: GenerateCaptionPayload) {
+  return postToN8n(
+    process.env.NEXT_PUBLIC_N8N_GENERATE_CAPTION_WEBHOOK_URL,
+    {
+      customer_id: requirePositiveInteger(payload.customer_id, "Customer ID"),
+      brand_profile_id: requirePositiveInteger(
+        payload.brand_profile_id,
+        "Brand profile ID",
+      ),
+      brand_name: requireText(payload.brand_name, "Brand name"),
+      target_audience: optionalText(payload.target_audience),
+      brand_voice: optionalText(payload.brand_voice),
+      default_cta: optionalText(payload.default_cta),
+      words_to_use: optionalText(payload.words_to_use),
+      platform: requireAllowedValue(payload.platform, "Platform", allowedPlatforms),
+      topic: requireText(payload.topic, "Topic"),
+      content_pillar: requireText(
+        payload.content_pillar,
+        "Content pillar",
+      ).toLowerCase(),
+      goal: requireText(payload.goal, "Goal").toLowerCase(),
+      campaign: optionalText(payload.campaign),
+      offer: optionalText(payload.offer),
+      call_to_action: optionalText(payload.call_to_action),
+    },
+    "Failed to generate caption",
+  );
+}
+
 export type UpdatePostPayload = {
   id: number;
   customer_id: number;

@@ -94,16 +94,33 @@ The page must handle:
 - Success response
 - Error response
 
-## Future pages
+## Current pages
 
-Later add:
+The frontend now includes:
 
 ```text
 /app/customers
 /app/brand-profile
+/app/brand-profiles
+/app/brand-profiles/[id]
 /app/posts
-/app/calendar
-/app/settings
+/app/posts/list
+/app/posts/[id]
+/app/scheduled-posts
+/app/schedule-simulator
+/app/content-planner
+/app/workflow-logs
+/app/dashboard
 ```
 
-Do not build these until the first page works.
+## Future pages
+
+Later milestones may add:
+
+```text
+/app/ai-generation
+/app/social-accounts
+/app/calendar
+/app/settings
+/app/billing
+```

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/datetime";
 import { BrandProfileRecord, listBrandProfiles } from "@/lib/n8n-client";
 
 type BrandProfilesResponse = {
@@ -139,7 +140,9 @@ export default function BrandProfilesPage() {
                     </td>
                     <td className="px-3 py-2">{profile.target_audience}</td>
                     <td className="px-3 py-2">{profile.brand_voice}</td>
-                    <td className="px-3 py-2">{profile.updated_at}</td>
+                    <td className="px-3 py-2">
+                      {formatDateTime(profile.updated_at)}
+                    </td>
                   </tr>
                 ))
               )}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/datetime";
 import { listScheduledPosts, ScheduledPost } from "@/lib/n8n-client";
 
 type ScheduledPostsResponse = {
@@ -101,8 +102,12 @@ export default function ScheduledPostsPage() {
                     <td className="px-3 py-2">{post.platform}</td>
                     <td className="px-3 py-2">{post.topic}</td>
                     <td className="px-3 py-2">{post.status}</td>
-                    <td className="px-3 py-2">{post.scheduled_at ?? ""}</td>
-                    <td className="px-3 py-2">{post.created_at}</td>
+                    <td className="px-3 py-2">
+                      {formatDateTime(post.scheduled_at)}
+                    </td>
+                    <td className="px-3 py-2">
+                      {formatDateTime(post.created_at)}
+                    </td>
                   </tr>
                 ))
               )}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/datetime";
 import { listWorkflowLogs, WorkflowLog } from "@/lib/n8n-client";
 
 type WorkflowLogsResponse = {
@@ -94,7 +95,9 @@ export default function WorkflowLogsPage() {
                     <td className="px-3 py-2">{log.event_type}</td>
                     <td className="px-3 py-2">{log.status}</td>
                     <td className="px-3 py-2">{log.error_message ?? ""}</td>
-                    <td className="px-3 py-2">{log.created_at}</td>
+                    <td className="px-3 py-2">
+                      {formatDateTime(log.created_at)}
+                    </td>
                   </tr>
                 ))
               )}

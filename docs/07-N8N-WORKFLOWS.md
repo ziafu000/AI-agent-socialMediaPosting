@@ -18,6 +18,11 @@ Active local workflows now include:
 - `Run Schedule Simulation`
 - `Dashboard Summary`
 
+An additional importable stub workflow now exists for AI generation prototyping:
+
+- `n8n/workflows/generate-content-ideas-stub-workflow.json`
+- `n8n/workflows/generate-caption-stub-workflow.json`
+
 The exported local workflow state is tracked in:
 
 ```text
@@ -200,17 +205,20 @@ npm run data:consistency:report
 
 ## Future workflows
 
-### Save Brand Profile
-
-```text
-POST /webhook/save-brand-profile
-```
-
 ### Generate Content Ideas
 
 ```text
 POST /webhook/generate-content-ideas
 ```
+
+The current intended implementation path is:
+
+```text
+Webhook -> Validate Input -> Generate Stub Ideas -> Respond to Webhook
+```
+
+The `Generate Stub Ideas` node is the only node that should need to change when
+moving from stub output to a real model API.
 
 ### Generate Caption
 
@@ -218,8 +226,21 @@ POST /webhook/generate-content-ideas
 POST /webhook/generate-caption
 ```
 
+The current intended implementation path is:
+
+```text
+Webhook -> Validate Input -> Generate Stub Caption -> Respond to Webhook
+```
+
+The `Generate Stub Caption` node is the only node that should need to change
+when moving from stub output to a real model API.
+
 ### Schedule Post
 
 ```text
 POST /webhook/schedule-post
 ```
+
+Scheduling exists today through `Create Post` and `Update Post` by setting
+`status = scheduled` and `scheduled_at`. A dedicated `schedule-post` webhook has
+not been implemented yet.

@@ -1,0 +1,159 @@
+{
+  "name": "Generate Content Ideas",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-content-ideas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-generate-content-ideas",
+      "name": "Webhook",
+      "webhookId": "70962439-758a-4297-93f9-c937ff018b6a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedPillars = [\"education\", \"trust\", \"engagement\", \"conversion\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction optionalText(field) {\n  return String(body[field] ?? \"\").trim();\n}\n\nfunction requireStringArray(field, label, allowedValues) {\n  const value = Array.isArray(body[field]) ? body[field] : [];\n  const normalizedValues = value.map((item) => String(item ?? \"\").trim().toLowerCase()).filter(Boolean);\n\n  if (normalizedValues.length === 0) {\n    errors.push(label + \" is required\");\n    return [];\n  }\n\n  if (normalizedValues.some((item) => !allowedValues.includes(item))) {\n    errors.push(label + \" contains an invalid value\");\n  }\n\n  return [...new Set(normalizedValues)];\n}\n\nconst customerId = requirePositiveInteger(\"customer_id\", \"Customer ID\");\nconst brandProfileId = requirePositiveInteger(\"brand_profile_id\", \"Brand profile ID\");\nconst numberOfPosts = requirePositiveInteger(\"number_of_posts\", \"Number of posts\");\nconst platforms = requireStringArray(\"platforms\", \"Platforms\", allowedPlatforms);\nconst contentPillars = requireStringArray(\"content_pillars\", \"Content pillars\", allowedPillars);\nconst campaign = optionalText(\"campaign\");\nconst offer = optionalText(\"offer\");\nconst callToAction = optionalText(\"call_to_action\");\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      customer_id: customerId,\n      brand_profile_id: brandProfileId,\n      number_of_posts: numberOfPosts,\n      platforms,\n      content_pillars: contentPillars,\n      campaign,\n      offer,\n      call_to_action: callToAction\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "validate-generate-content-ideas",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-generate-content-ideas",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0],
+      "id": "if-generate-content-ideas",
+      "name": "Is Valid"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst topicTemplates = {\n  education: [\n    \"How to avoid common mistakes with {offer}\",\n    \"A quick checklist for {campaign}\",\n    \"What customers should know before choosing {offer}\"\n  ],\n  trust: [\n    \"What a reliable {offer} process looks like\",\n    \"Why consistency matters in {campaign}\",\n    \"Questions to ask before committing to {offer}\"\n  ],\n  engagement: [\n    \"What is your biggest challenge with {campaign}?\",\n    \"Myth or fact about {offer}\",\n    \"A fast opinion check for your audience\"\n  ],\n  conversion: [\n    \"When it is time to take the next step on {offer}\",\n    \"Who gets the best result from {offer}\",\n    \"A simple offer invite for {campaign}\"\n  ]\n};\n\nconst goals = {\n  education: \"build_trust\",\n  trust: \"proof\",\n  engagement: \"conversation\",\n  conversion: \"generate_leads\"\n};\n\nfunction fillTemplate(template, values) {\n  return template.replace(/\\{(\\w+)\\}/g, (_, key) => values[key] ?? \"\");\n}\n\nfunction buildHashtagSeed(input) {\n  return String(input ?? \"\")\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .split(/\\s+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((word) => `#${word}`)\n    .join(\" \");\n}\n\nconst campaign = body.campaign || \"your campaign\";\nconst offer = body.offer || \"your offer\";\nconst callToAction = body.call_to_action || \"Send a message to learn more\";\nconst count = body.number_of_posts;\nconst posts = [];\n\nbody.platforms.forEach((platform) => {\n  for (let index = 0; index < count; index += 1) {\n    const pillar = body.content_pillars[index % body.content_pillars.length];\n    const templates = topicTemplates[pillar];\n    const topic = fillTemplate(templates[index % templates.length], {\n      campaign,\n      offer\n    });\n\n    posts.push({\n      platform,\n      topic,\n      content_pillar: pillar,\n      goal: goals[pillar],\n      caption: `Stub idea for ${platform}. Focus on ${campaign}. Offer: ${offer}. CTA: ${callToAction}.`,\n      hashtags: [\n        buildHashtagSeed(platform),\n        buildHashtagSeed(campaign),\n        buildHashtagSeed(offer)\n      ].filter(Boolean).join(\" \")\n    });\n  }\n});\n\nreturn [{ json: { success: true, posts } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -120],
+      "id": "generate-stub-ideas",
+      "name": "Generate Stub Ideas"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [880, -120],
+      "id": "respond-generate-content-ideas",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [660, 220],
+      "id": "respond-validation-error-generate-content-ideas",
+      "name": "Respond Validation Error"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid": {
+      "main": [
+        [
+          {
+            "node": "Generate Stub Ideas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Stub Ideas": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": []
+}

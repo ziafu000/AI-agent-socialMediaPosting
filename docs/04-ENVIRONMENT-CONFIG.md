@@ -29,31 +29,6 @@ N8N_BASIC_AUTH_PASSWORD=admin123
 N8N_ENCRYPTION_KEY=replace_with_a_long_random_string
 ```
 
-## Root `.env.example`
-
-File path:
-
-```text
-.env.example
-```
-
-Content:
-
-```env
-# MySQL
-MYSQL_ROOT_PASSWORD=
-MYSQL_DATABASE=ai_social_saas
-MYSQL_USER=ai_social_user
-MYSQL_PASSWORD=
-MYSQL_PORT=3306
-
-# n8n
-N8N_PORT=5678
-N8N_BASIC_AUTH_USER=
-N8N_BASIC_AUTH_PASSWORD=
-N8N_ENCRYPTION_KEY=
-```
-
 ## Frontend `.env.local`
 
 File path:

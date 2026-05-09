@@ -116,6 +116,12 @@ export default function Home() {
           >
             Open schedule simulator
           </Link>
+          <Link
+            className="ml-4 mt-4 inline-flex text-sm font-medium text-slate-950 underline"
+            href="/content-planner"
+          >
+            Open content planner
+          </Link>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>

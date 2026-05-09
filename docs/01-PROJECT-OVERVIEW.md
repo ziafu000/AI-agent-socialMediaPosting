@@ -16,9 +16,22 @@ It will eventually help customers:
 
 ## Current phase
 
-This phase is not the full SaaS.
+This project has moved beyond the first local skeleton.
 
-This phase is only the local technical skeleton.
+Current local scope includes:
+
+- Customer create/list/detail
+- Brand profile create/list/update
+- Post draft create/list/update
+- Content planning without AI
+- Scheduled post list
+- Schedule simulation
+- Dashboard summary
+- Workflow logs
+- Frontend and n8n validation/error handling
+
+It is still not the full SaaS. AI generation, real social publishing,
+authentication, workspaces, and billing are future milestones.
 
 ## Local skeleton architecture
 
@@ -38,14 +51,19 @@ DBeaver database client
 
 n8n is the first automation backend layer.
 
-At the beginning, it will handle:
+It currently handles:
 
 - Webhook receiving
 - Simple workflow logic
 - Database insert/update
-- Later: AI calls
-- Later: scheduled workflows
-- Later: social posting workflows
+- Workflow logging
+- Schedule simulation
+
+Later, it may handle:
+
+- AI calls
+- Real scheduled publishing workflows
+- Social posting workflows
 
 ## Why MySQL is used
 

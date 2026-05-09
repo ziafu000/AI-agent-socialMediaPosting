@@ -30,7 +30,7 @@ Contains:
 - Pages
 - Components
 - Client form
-- Frontend environment config
+- Frontend environment config in `apps/web/.env.local`
 
 ### `docker/mysql/init`
 

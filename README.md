@@ -53,10 +53,12 @@ Implemented:
 - Phase 0 local skeleton
 - Brand profile management
 - Post draft management
+- Content planning without AI
 - Scheduling simulation
 - Workflow logs
 - Customers list and detail
 - Dashboard summary
+- Dashboard polish
 - Validation and error handling
 - Data consistency cleanup
 

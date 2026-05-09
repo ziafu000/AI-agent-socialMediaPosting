@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { toDatetimeLocalValue } from "@/lib/datetime";
 import { listPosts, PostRecord, updatePost } from "@/lib/n8n-client";
 
 type PostsResponse = {
@@ -20,14 +21,6 @@ type EditPostForm = {
   status: string;
   scheduled_at: string;
 };
-
-function toDatetimeLocal(value: string | null) {
-  if (!value) {
-    return "";
-  }
-
-  return value.replace(" ", "T").slice(0, 16);
-}
 
 export default function EditPostPage() {
   const params = useParams<{ id: string }>();
@@ -60,7 +53,7 @@ export default function EditPostPage() {
           caption: post.caption ?? "",
           hashtags: post.hashtags ?? "",
           status: post.status,
-          scheduled_at: toDatetimeLocal(post.scheduled_at),
+          scheduled_at: toDatetimeLocalValue(post.scheduled_at),
         });
       } catch (caughtError) {
         setError(
@@ -250,7 +243,7 @@ export default function EditPostPage() {
 
               <label className="block">
                 <span className="text-sm font-medium text-slate-700">
-                  Scheduled at
+                  Scheduled at (GMT+7)
                 </span>
                 <input
                   className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
