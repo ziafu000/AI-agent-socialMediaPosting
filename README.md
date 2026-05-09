@@ -21,6 +21,7 @@ The goal is to give an AI coding assistant enough context to help build the proj
 13. `docs/12-ROADMAP.md`
 14. `docs/13-TROUBLESHOOTING.md`
 15. `docs/14-AI-PROMPTS.md`
+16. `docs/15-LAPTOP-MIGRATION.md`
 
 ## Project goal
 
