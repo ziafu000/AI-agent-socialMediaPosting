@@ -466,6 +466,22 @@ export async function updatePost(payload: UpdatePostPayload) {
   );
 }
 
+export type SchedulePostPayload = {
+  id: number;
+  scheduled_at: string;
+};
+
+export async function schedulePost(payload: SchedulePostPayload) {
+  return postToN8n(
+    process.env.NEXT_PUBLIC_N8N_SCHEDULE_POST_WEBHOOK_URL,
+    {
+      id: requirePositiveInteger(payload.id, "Post ID"),
+      scheduled_at: normalizeScheduledAt(payload.scheduled_at, "scheduled"),
+    },
+    "Failed to schedule post",
+  );
+}
+
 export type PostRecord = {
   id: number;
   customer_id: number;

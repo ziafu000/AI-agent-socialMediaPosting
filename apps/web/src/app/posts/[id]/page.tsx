@@ -4,7 +4,12 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toDatetimeLocalValue } from "@/lib/datetime";
-import { listPosts, PostRecord, updatePost } from "@/lib/n8n-client";
+import {
+  listPosts,
+  PostRecord,
+  schedulePost,
+  updatePost,
+} from "@/lib/n8n-client";
 
 type PostsResponse = {
   success: boolean;
@@ -29,6 +34,7 @@ export default function EditPostPage() {
   const [form, setForm] = useState<EditPostForm | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState("");
 
@@ -113,6 +119,40 @@ export default function EditPostPage() {
       );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleSchedulePost() {
+    if (!form) {
+      return;
+    }
+
+    setIsScheduling(true);
+    setResult(null);
+    setError("");
+
+    try {
+      const response = await schedulePost({
+        id: Number(form.id),
+        scheduled_at: form.scheduled_at,
+      });
+      setForm((currentForm) =>
+        currentForm
+          ? {
+              ...currentForm,
+              status: "scheduled",
+            }
+          : currentForm,
+      );
+      setResult(response);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unexpected error while scheduling post",
+      );
+    } finally {
+      setIsScheduling(false);
     }
   }
 
@@ -258,10 +298,19 @@ export default function EditPostPage() {
 
             <button
               className="w-full rounded-md bg-slate-950 px-4 py-2 font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isScheduling}
               type="submit"
             >
               {isSubmitting ? "Saving..." : "Update post"}
+            </button>
+
+            <button
+              className="w-full rounded-md border border-slate-950 px-4 py-2 font-medium text-slate-950 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+              disabled={isSubmitting || isScheduling}
+              type="button"
+              onClick={handleSchedulePost}
+            >
+              {isScheduling ? "Scheduling..." : "Schedule post"}
             </button>
           </form>
         ) : null}

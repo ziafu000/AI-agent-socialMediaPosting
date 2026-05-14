@@ -286,8 +286,6 @@ Behavior:
 - later production swap should replace only that generator node with a real model node
 - the content planner updates only the selected idea card when caption generation succeeds
 
-## Contract 9 - Dedicated Schedule Post
-
 ## Contract 9 - Rewrite Caption
 
 Implemented as a stub-compatible production contract.
@@ -335,14 +333,41 @@ Behavior:
 
 ## Contract 10 - Dedicated Schedule Post
 
-Not implemented yet.
-
-Scheduling currently exists through `create-post` and `update-post` by setting
-`status = scheduled` and `scheduled_at`. A separate `schedule-post` webhook has
-not been implemented.
-
-Planned endpoint:
+Implemented endpoint:
 
 ```text
 POST http://localhost:5678/webhook/schedule-post
 ```
+
+Request body:
+
+```json
+{
+  "id": 1,
+  "scheduled_at": "2026-05-14T21:30"
+}
+```
+
+Required fields:
+
+```text
+id
+scheduled_at
+```
+
+Success response:
+
+```json
+{
+  "success": true,
+  "message": "Post scheduled successfully"
+}
+```
+
+Behavior:
+
+- validates the target post ID and schedule datetime
+- returns `404` when the target post does not exist
+- updates `posts.status` to `scheduled`
+- updates `posts.scheduled_at`
+- writes a `workflow_logs` row with `event_type = schedule_post`

@@ -1,0 +1,291 @@
+{
+  "name": "Schedule Post",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "schedule-post",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-schedule-post",
+      "name": "Webhook",
+      "webhookId": "6e0b41a1-8d12-4f7e-94e5-56e862f8a594"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\nconst errors = [];\n\nfunction escapeSql(value) {\n  return String(value ?? \"\").trim().replace(/'/g, \"''\");\n}\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nconst id = requirePositiveInteger(\"id\", \"Post ID\");\nlet scheduledAt = String(body.scheduled_at ?? \"\").trim().replace(\"T\", \" \");\n\nif (!scheduledAt) {\n  errors.push(\"Scheduled at is required\");\n}\n\nif (scheduledAt && Number.isNaN(Date.parse(scheduledAt))) {\n  errors.push(\"Scheduled at is invalid\");\n}\n\nscheduledAt = escapeSql(scheduledAt);\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{ json: { valid: true, body: { id, scheduled_at: scheduledAt } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "validate-schedule-post",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-schedule-post",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0],
+      "id": "if-schedule-post",
+      "name": "Is Valid"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [660, 220],
+      "id": "respond-validation-error-schedule-post",
+      "name": "Respond Validation Error"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id\nFROM posts\nWHERE id = {{ $('Validate Input').item.json.body.id }}\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [660, -140],
+      "id": "find-post-schedule-post",
+      "name": "Find Post",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "BKYkXhg7gKhGGXMN",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "post-found-schedule-post",
+              "leftValue": "={{ $json.id !== undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [880, -140],
+      "id": "post-found-schedule-post",
+      "name": "Post Found"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [1100, 80],
+      "id": "respond-post-not-found-schedule-post",
+      "name": "Respond Post Not Found"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE posts\nSET\n  status = 'scheduled',\n  scheduled_at = '{{ $('Validate Input').item.json.body.scheduled_at }}',\n  updated_at = CURRENT_TIMESTAMP\nWHERE id = {{ $('Validate Input').item.json.body.id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1100, -220],
+      "id": "update-schedule-post",
+      "name": "Update Schedule",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "BKYkXhg7gKhGGXMN",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_logs (\n  workflow_name,\n  event_type,\n  status,\n  input_payload,\n  output_payload\n)\nVALUES (\n  'Schedule Post',\n  'schedule_post',\n  'success',\n  JSON_OBJECT(\n    'id', {{ $('Validate Input').item.json.body.id }},\n    'scheduled_at', '{{ $('Validate Input').item.json.body.scheduled_at }}'\n  ),\n  JSON_OBJECT('message', 'Post scheduled successfully')\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1320, -220],
+      "id": "log-schedule-post",
+      "name": "Log Schedule",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "BKYkXhg7gKhGGXMN",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Post scheduled successfully\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [1540, -220],
+      "id": "respond-schedule-post",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid": {
+      "main": [
+        [
+          {
+            "node": "Find Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Post": {
+      "main": [
+        [
+          {
+            "node": "Post Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Found": {
+      "main": [
+        [
+          {
+            "node": "Update Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Post Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Schedule": {
+      "main": [
+        [
+          {
+            "node": "Log Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Schedule": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": []
+}
