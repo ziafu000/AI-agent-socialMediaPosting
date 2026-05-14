@@ -378,7 +378,7 @@ Test customers:
 Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/list-customers" -ContentType "application/json" -Body "{}"
 ```
 
-Test AI stub caption:
+Test AI model caption:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/generate-caption" -ContentType "application/json" -Body '{"customer_id":1,"brand_profile_id":1,"brand_name":"Demo Spa","platform":"facebook","topic":"Acne treatment benefits","content_pillar":"education","goal":"build_trust"}'

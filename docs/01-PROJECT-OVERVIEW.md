@@ -24,13 +24,17 @@ Current local scope includes:
 - Brand profile create/list/update
 - Post draft create/list/update
 - Content planning without AI
+- AI model content idea generation through n8n
+- AI model caption generation through n8n
+- AI model caption rewrite through n8n
+- Dedicated post scheduling workflow
 - Scheduled post list
 - Schedule simulation
 - Dashboard summary
 - Workflow logs
 - Frontend and n8n validation/error handling
 
-It is still not the full SaaS. AI generation, real social publishing,
+It is still not the full SaaS. Final production AI setup, real social publishing,
 authentication, workspaces, and billing are future milestones.
 
 ## Local skeleton architecture
@@ -58,10 +62,12 @@ It currently handles:
 - Database insert/update
 - Workflow logging
 - Schedule simulation
+- Temporary DeepSeek-backed AI generation
+- Dedicated post scheduling
 
 Later, it may handle:
 
-- AI calls
+- Final production AI model calls
 - Real scheduled publishing workflows
 - Social posting workflows
 

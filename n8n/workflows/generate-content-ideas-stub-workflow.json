@@ -11,7 +11,10 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "id": "webhook-generate-content-ideas",
       "name": "Webhook",
       "webhookId": "70962439-758a-4297-93f9-c937ff018b6a"
@@ -22,7 +25,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0],
+      "position": [
+        220,
+        0
+      ],
       "id": "validate-generate-content-ideas",
       "name": "Validate Input"
     },
@@ -53,7 +59,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 0],
+      "position": [
+        440,
+        0
+      ],
       "id": "if-generate-content-ideas",
       "name": "Is Valid"
     },
@@ -63,7 +72,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, -120],
+      "position": [
+        660,
+        -120
+      ],
       "id": "generate-stub-ideas",
       "name": "Generate Stub Ideas"
     },
@@ -75,7 +87,10 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
-      "position": [880, -120],
+      "position": [
+        880,
+        -120
+      ],
       "id": "respond-generate-content-ideas",
       "name": "Respond to Webhook"
     },
@@ -89,9 +104,25 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
-      "position": [660, 220],
+      "position": [
+        660,
+        220
+      ],
       "id": "respond-validation-error-generate-content-ideas",
       "name": "Respond Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\n\nfunction parseJsonContent(content) {\n  const raw = String(content ?? \"\").trim();\n  const cleaned = raw.replace(/^```(?:json)?/i, \"\").replace(/```$/i, \"\").trim();\n  try {\n    return JSON.parse(cleaned);\n  } catch {\n    const start = cleaned.indexOf(\"{\");\n    const end = cleaned.lastIndexOf(\"}\");\n    if (start >= 0 && end > start) {\n      return JSON.parse(cleaned.slice(start, end + 1));\n    }\n    throw new Error(\"Model did not return valid JSON\");\n  }\n}\n\nasync function callDeepSeek(messages) {\n  const apiKey = $env.DEEPSEEK_API_KEY;\n\n  if (!apiKey) {\n    throw new Error(\"Missing DEEPSEEK_API_KEY in n8n environment\");\n  }\n\n  const data = await this.helpers.httpRequest({\n    method: \"POST\",\n    url: \"https://api.deepseek.com/chat/completions\",\n    headers: {\n      \"Content-Type\": \"application/json\",\n      Authorization: \"Bearer \" + apiKey\n    },\n    body: {\n      model: \"deepseek-chat\",\n      temperature: 0.7,\n      response_format: { type: \"json_object\" },\n      messages\n    },\n    json: true\n  });\n\n  return data?.choices?.[0]?.message?.content;\n}\n\nfunction cleanText(value) {\n  return String(value ?? \"\").trim();\n}\n\nfunction normalizePost(post, index) {\n  const platform = body.platforms.includes(String(post.platform ?? \"\").toLowerCase())\n    ? String(post.platform).toLowerCase()\n    : body.platforms[index % body.platforms.length];\n  const pillar = body.content_pillars.includes(String(post.content_pillar ?? \"\").toLowerCase())\n    ? String(post.content_pillar).toLowerCase()\n    : body.content_pillars[index % body.content_pillars.length];\n\n  return {\n    platform,\n    topic: cleanText(post.topic) || `Content idea ${index + 1}`,\n    content_pillar: pillar,\n    goal: cleanText(post.goal) || \"build_trust\",\n    caption: cleanText(post.caption),\n    hashtags: cleanText(post.hashtags)\n  };\n}\n\ntry {\n  const totalPosts = body.platforms.length * body.number_of_posts;\n  const content = await callDeepSeek([\n    {\n      role: \"system\",\n      content: \"You are a social media content strategist. Return only valid JSON with shape {\\\"success\\\":true,\\\"posts\\\":[{\\\"platform\\\":string,\\\"topic\\\":string,\\\"content_pillar\\\":string,\\\"goal\\\":string,\\\"caption\\\":string,\\\"hashtags\\\":string}]}. Do not include markdown.\"\n    },\n    {\n      role: \"user\",\n      content: JSON.stringify({\n        task: \"Generate social media content ideas\",\n        total_posts: totalPosts,\n        posts_per_platform: body.number_of_posts,\n        platforms: body.platforms,\n        content_pillars: body.content_pillars,\n        campaign: body.campaign,\n        offer: body.offer,\n        call_to_action: body.call_to_action,\n        requirements: [\n          \"Return exactly total_posts posts\",\n          \"Distribute posts across the requested platforms\",\n          \"Use only requested content_pillars\",\n          \"Keep captions concise\",\n          \"Hashtags must be a space-separated string\"\n        ]\n      })\n    }\n  ]);\n\n  const parsed = parseJsonContent(content);\n  const posts = Array.isArray(parsed.posts) ? parsed.posts.slice(0, totalPosts).map(normalizePost) : [];\n\n  if (posts.length === 0) {\n    throw new Error(\"DeepSeek returned no posts\");\n  }\n\n  return [{ json: { success: true, posts } }];\n} catch (error) {\n  return [{ json: { success: false, message: \"AI generation failed\", error: error instanceof Error ? error.message : String(error) } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -120
+      ],
+      "id": "call-deepseek-content-ideas",
+      "name": "Call DeepSeek Ideas"
     }
   ],
   "connections": {
@@ -121,7 +152,7 @@
       "main": [
         [
           {
-            "node": "Generate Stub Ideas",
+            "node": "Call DeepSeek Ideas",
             "type": "main",
             "index": 0
           }
@@ -135,7 +166,7 @@
         ]
       ]
     },
-    "Generate Stub Ideas": {
+    "Call DeepSeek Ideas": {
       "main": [
         [
           {
@@ -155,5 +186,6 @@
     "templateCredsSetupCompleted": true
   },
   "pinData": {},
-  "tags": []
+  "tags": [],
+  "id": "XPtYQtBMQ3dGrpZn"
 }

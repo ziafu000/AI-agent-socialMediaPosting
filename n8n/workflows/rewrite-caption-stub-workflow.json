@@ -11,7 +11,10 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "id": "webhook-rewrite-caption",
       "name": "Webhook",
       "webhookId": "5a9ef6f0-8ac8-4421-930c-2e5691fbdbd3"
@@ -22,7 +25,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0],
+      "position": [
+        220,
+        0
+      ],
       "id": "validate-rewrite-caption",
       "name": "Validate Input"
     },
@@ -53,7 +59,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 0],
+      "position": [
+        440,
+        0
+      ],
       "id": "if-rewrite-caption",
       "name": "Is Valid"
     },
@@ -63,7 +72,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, -120],
+      "position": [
+        660,
+        -120
+      ],
       "id": "rewrite-stub-caption",
       "name": "Rewrite Stub Caption"
     },
@@ -75,7 +87,10 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
-      "position": [880, -120],
+      "position": [
+        880,
+        -120
+      ],
       "id": "respond-rewrite-caption",
       "name": "Respond to Webhook"
     },
@@ -89,9 +104,25 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
-      "position": [660, 220],
+      "position": [
+        660,
+        220
+      ],
       "id": "respond-validation-error-rewrite-caption",
       "name": "Respond Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\n\nfunction parseJsonContent(content) {\n  const raw = String(content ?? \"\").trim();\n  const cleaned = raw.replace(/^```(?:json)?/i, \"\").replace(/```$/i, \"\").trim();\n  try {\n    return JSON.parse(cleaned);\n  } catch {\n    const start = cleaned.indexOf(\"{\");\n    const end = cleaned.lastIndexOf(\"}\");\n    if (start >= 0 && end > start) {\n      return JSON.parse(cleaned.slice(start, end + 1));\n    }\n    throw new Error(\"Model did not return valid JSON\");\n  }\n}\n\nasync function callDeepSeek(messages) {\n  const apiKey = $env.DEEPSEEK_API_KEY;\n\n  if (!apiKey) {\n    throw new Error(\"Missing DEEPSEEK_API_KEY in n8n environment\");\n  }\n\n  const data = await this.helpers.httpRequest({\n    method: \"POST\",\n    url: \"https://api.deepseek.com/chat/completions\",\n    headers: {\n      \"Content-Type\": \"application/json\",\n      Authorization: \"Bearer \" + apiKey\n    },\n    body: {\n      model: \"deepseek-chat\",\n      temperature: 0.7,\n      response_format: { type: \"json_object\" },\n      messages\n    },\n    json: true\n  });\n\n  return data?.choices?.[0]?.message?.content;\n}\n\nfunction cleanText(value) {\n  return String(value ?? \"\").trim();\n}\n\ntry {\n  const content = await callDeepSeek([\n    {\n      role: \"system\",\n      content: \"You are a social media copy editor. Return only valid JSON with shape {\\\"success\\\":true,\\\"caption\\\":string,\\\"hashtags\\\":string}. Do not include markdown.\"\n    },\n    {\n      role: \"user\",\n      content: JSON.stringify({\n        task: \"Rewrite the current caption\",\n        rewrite_style: body.rewrite_style,\n        brand_name: body.brand_name,\n        target_audience: body.target_audience,\n        brand_voice: body.brand_voice,\n        default_cta: body.default_cta,\n        words_to_use: body.words_to_use,\n        platform: body.platform,\n        topic: body.topic,\n        content_pillar: body.content_pillar,\n        goal: body.goal,\n        campaign: body.campaign,\n        offer: body.offer,\n        call_to_action: body.call_to_action,\n        current_caption: body.current_caption,\n        current_hashtags: body.current_hashtags,\n        requirements: [\n          \"Preserve the core meaning\",\n          \"Apply rewrite_style clearly\",\n          \"Return hashtags as a space-separated string\"\n        ]\n      })\n    }\n  ]);\n\n  const parsed = parseJsonContent(content);\n  const caption = cleanText(parsed.caption);\n\n  if (!caption) {\n    throw new Error(\"DeepSeek returned an empty rewrite\");\n  }\n\n  return [{ json: { success: true, caption, hashtags: cleanText(parsed.hashtags || body.current_hashtags) } }];\n} catch (error) {\n  return [{ json: { success: false, message: \"AI caption rewrite failed\", error: error instanceof Error ? error.message : String(error) } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -120
+      ],
+      "id": "call-deepseek-rewrite",
+      "name": "Call DeepSeek Rewrite"
     }
   ],
   "connections": {
@@ -121,7 +152,7 @@
       "main": [
         [
           {
-            "node": "Rewrite Stub Caption",
+            "node": "Call DeepSeek Rewrite",
             "type": "main",
             "index": 0
           }
@@ -135,7 +166,7 @@
         ]
       ]
     },
-    "Rewrite Stub Caption": {
+    "Call DeepSeek Rewrite": {
       "main": [
         [
           {
@@ -155,5 +186,6 @@
     "templateCredsSetupCompleted": true
   },
   "pinData": {},
-  "tags": []
+  "tags": [],
+  "id": "LOFPVOkYWyFi9X0a"
 }

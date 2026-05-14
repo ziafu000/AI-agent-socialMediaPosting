@@ -217,14 +217,14 @@ npm run data:consistency:report
 POST /webhook/generate-content-ideas
 ```
 
-The current intended implementation path is:
+The current implementation path is:
 
 ```text
-Webhook -> Validate Input -> Generate Stub Ideas -> Respond to Webhook
+Webhook -> Validate Input -> Call DeepSeek Ideas -> Respond to Webhook
 ```
 
-The `Generate Stub Ideas` node is the only node that should need to change when
-moving from stub output to a real model API.
+The old `Generate Stub Ideas` node is still kept inside the workflow as a
+disconnected fallback node.
 
 ### Generate Caption
 
@@ -232,14 +232,14 @@ moving from stub output to a real model API.
 POST /webhook/generate-caption
 ```
 
-The current intended implementation path is:
+The current implementation path is:
 
 ```text
-Webhook -> Validate Input -> Generate Stub Caption -> Respond to Webhook
+Webhook -> Validate Input -> Call DeepSeek Caption -> Respond to Webhook
 ```
 
-The `Generate Stub Caption` node is the only node that should need to change
-when moving from stub output to a real model API.
+The old `Generate Stub Caption` node is still kept inside the workflow as a
+disconnected fallback node.
 
 ### Rewrite Caption
 
@@ -247,14 +247,14 @@ when moving from stub output to a real model API.
 POST /webhook/rewrite-caption
 ```
 
-The current intended implementation path is:
+The current implementation path is:
 
 ```text
-Webhook -> Validate Input -> Rewrite Stub Caption -> Respond to Webhook
+Webhook -> Validate Input -> Call DeepSeek Rewrite -> Respond to Webhook
 ```
 
-The `Rewrite Stub Caption` node is the only node that should need to change
-when moving from stub output to a real model API.
+The old `Rewrite Stub Caption` node is still kept inside the workflow as a
+disconnected fallback node.
 
 ### Schedule Post
 

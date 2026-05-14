@@ -192,7 +192,7 @@ POST http://localhost:5678/webhook/dashboard-summary
 
 ## Contract 7 - Generate Content Ideas
 
-Implemented as a stub-compatible production contract.
+Implemented as a model-backed production contract with a temporary DeepSeek node.
 
 Current endpoint:
 
@@ -235,13 +235,14 @@ Current response:
 
 Behavior:
 
-- the current workflow returns deterministic stub data through one generator node
-- later production swap should replace only that generator node with a real model node
-- frontend should treat this contract as stable and should not depend on whether the source is stub or model
+- the current workflow calls a temporary DeepSeek model node
+- the old deterministic stub node remains in n8n as a disconnected fallback
+- frontend should treat this contract as stable and should not depend on the model provider
+- if the temporary API key has no credit, the workflow returns `success: false` with the provider error
 
 ## Contract 8 - Generate Caption
 
-Implemented as a stub-compatible production contract.
+Implemented as a model-backed production contract with a temporary DeepSeek node.
 
 Current endpoint:
 
@@ -282,13 +283,14 @@ Current response:
 
 Behavior:
 
-- the current workflow returns deterministic stub caption data through one generator node
-- later production swap should replace only that generator node with a real model node
+- the current workflow calls a temporary DeepSeek model node
+- the old deterministic stub node remains in n8n as a disconnected fallback
 - the content planner updates only the selected idea card when caption generation succeeds
+- if the temporary API key has no credit, the workflow returns `success: false` with the provider error
 
 ## Contract 9 - Rewrite Caption
 
-Implemented as a stub-compatible production contract.
+Implemented as a model-backed production contract with a temporary DeepSeek node.
 
 Current endpoint:
 
@@ -327,9 +329,10 @@ Current response:
 
 Behavior:
 
-- the current workflow returns deterministic stub rewrite data through one generator node
-- later production swap should replace only that generator node with a real model node
+- the current workflow calls a temporary DeepSeek model node
+- the old deterministic stub node remains in n8n as a disconnected fallback
 - the content planner updates only the selected idea card when rewrite succeeds
+- if the temporary API key has no credit, the workflow returns `success: false` with the provider error
 
 ## Contract 10 - Dedicated Schedule Post
 

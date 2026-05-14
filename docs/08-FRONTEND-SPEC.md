@@ -113,12 +113,25 @@ The frontend now includes:
 /app/dashboard
 ```
 
+Current content planner behavior:
+
+- manual planner mode creates deterministic ideas in the browser
+- AI mode calls `generate-content-ideas`
+- individual ideas can call `generate-caption`
+- individual generated captions can call `rewrite-caption`
+
+Current scheduling behavior:
+
+- post edit page can update post content/status
+- post edit page can call the dedicated `schedule-post` workflow
+- scheduled posts list shows posts with `status = scheduled`
+
 ## Future pages
 
 Later milestones may add:
 
 ```text
-/app/ai-generation
+/app/approvals
 /app/social-accounts
 /app/calendar
 /app/settings

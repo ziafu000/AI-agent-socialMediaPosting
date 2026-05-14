@@ -55,7 +55,11 @@ Implemented:
 - Brand profile management
 - Post draft management
 - Content planning without AI
+- AI content generation via temporary DeepSeek model nodes
+- Generate caption stub
+- Rewrite caption stub
 - Scheduling simulation
+- Dedicated schedule post workflow
 - Workflow logs
 - Customers list and detail
 - Dashboard summary
@@ -76,3 +80,18 @@ Data consistency cleanup currently includes:
 - duplicate-safe create behavior for identical post drafts
 - not-found error response on update workflows
 - local audit script: `npm run data:consistency:report`
+
+Current AI generation status:
+
+- `generate-content-ideas` started as a deterministic n8n stub workflow
+- `generate-caption` started as a deterministic n8n stub workflow
+- `rewrite-caption` started as a deterministic n8n stub workflow
+- these workflows are now wired to temporary DeepSeek model nodes
+- the old stub nodes are still kept inside n8n as disconnected fallback nodes
+- future production AI can replace only the connected model node while keeping the webhook contract stable
+
+Current scheduling status:
+
+- posts can be scheduled from the edit post page
+- `schedule-post` is implemented as a dedicated n8n workflow
+- scheduled posts can be listed and simulated as published

@@ -458,7 +458,7 @@ export default function ContentPlannerPage() {
       setIdeas(nextIdeas);
       setResult({
         success: true,
-        message: "AI stub ideas generated successfully",
+        message: "AI ideas generated successfully",
         generated_count: nextIdeas.length,
       });
     } catch (caughtError) {
@@ -718,13 +718,13 @@ export default function ContentPlannerPage() {
                   type="button"
                   onClick={() => setMode("ai_stub")}
                 >
-                  AI stub
+                  AI model
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
                 {mode === "manual"
                   ? "Manual planner uses local templates in the frontend."
-                  : "AI stub calls the generate-content-ideas webhook. Later, only the stub node in n8n needs to be replaced with a real model node."}
+                  : "AI model calls the generate-content-ideas webhook. The old stub node is still kept in n8n as a disconnected fallback."}
               </p>
             </div>
 
@@ -884,7 +884,7 @@ export default function ContentPlannerPage() {
                   type="button"
                   onClick={generateAiIdeas}
                 >
-                  {isGeneratingAi ? "Generating..." : "Generate AI stub ideas"}
+                  {isGeneratingAi ? "Generating..." : "Generate AI ideas"}
                 </button>
               )}
               <button

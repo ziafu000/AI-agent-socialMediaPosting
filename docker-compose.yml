@@ -19,7 +19,7 @@ services:
       - ai_social_network
 
   n8n:
-    image: docker.n8n.io/n8nio/n8n:1.91.3
+    image: docker.n8n.io/n8nio/n8n:2.19.5
     container_name: ai_social_n8n
     user: "0:0"
     restart: unless-stopped
@@ -30,12 +30,14 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://localhost:${N8N_PORT}
+      - N8N_USER_FOLDER=/home/node
       - GENERIC_TIMEZONE=Asia/Ho_Chi_Minh
       - TZ=Asia/Ho_Chi_Minh
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
