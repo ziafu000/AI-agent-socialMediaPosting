@@ -374,3 +374,37 @@ Behavior:
 - updates `posts.status` to `scheduled`
 - updates `posts.scheduled_at`
 - writes a `workflow_logs` row with `event_type = schedule_post`
+
+## Contract 11 - Review Post
+
+Implemented endpoint:
+
+```text
+POST http://localhost:5678/webhook/review-post
+```
+
+Request body:
+
+```json
+{
+  "id": 1,
+  "action": "approve"
+}
+```
+
+Allowed `action` values:
+
+```text
+approve
+reject
+cancel
+```
+
+Behavior:
+
+- `approve` allows `needs_review -> approved`
+- `reject` allows `needs_review -> cancelled`
+- `cancel` allows `draft/needs_review/approved/scheduled -> cancelled`
+- invalid transitions return HTTP `400`
+- missing post returns HTTP `404`
+- approval decisions write `workflow_logs` rows with `approve_post`, `reject_post`, or `cancel_post`

@@ -43,6 +43,11 @@ const quickLinks = [
   },
   { href: "/posts/list", label: "Posts", description: "Review all post drafts" },
   {
+    href: "/approvals",
+    label: "Approvals",
+    description: "Approve or reject posts",
+  },
+  {
     href: "/workflow-logs",
     label: "Workflow logs",
     description: "Inspect recent n8n runs",

@@ -21,6 +21,7 @@ Active local workflows now include:
 - `Generate Caption`
 - `Rewrite Caption`
 - `Schedule Post`
+- `Review Post`
 
 Additional importable workflows are tracked in:
 
@@ -28,6 +29,7 @@ Additional importable workflows are tracked in:
 - `n8n/workflows/generate-caption-stub-workflow.json`
 - `n8n/workflows/rewrite-caption-stub-workflow.json`
 - `n8n/workflows/schedule-post-workflow.json`
+- `n8n/workflows/review-post-workflow.json`
 
 The exported local workflow state is tracked in:
 
@@ -270,3 +272,31 @@ Webhook -> Validate Input -> Find Post -> Update Schedule -> Log Schedule -> Res
 
 It updates an existing post to `status = scheduled`, stores `scheduled_at`, and
 writes a workflow log row with `event_type = schedule_post`.
+
+### Review Post
+
+```text
+POST /webhook/review-post
+```
+
+The current implementation path is:
+
+```text
+Webhook -> Validate Input -> Find Post -> Validate Transition -> Update Review Status -> Log Review -> Respond to Webhook
+```
+
+Supported actions:
+
+```text
+approve: needs_review -> approved
+reject: needs_review -> cancelled
+cancel: draft/needs_review/approved/scheduled -> cancelled
+```
+
+It writes workflow log rows with event types:
+
+```text
+approve_post
+reject_post
+cancel_post
+```

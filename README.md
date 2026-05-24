@@ -60,6 +60,7 @@ Implemented:
 - Rewrite caption stub
 - Scheduling simulation
 - Dedicated schedule post workflow
+- Approval workflow
 - Workflow logs
 - Customers list and detail
 - Dashboard summary
@@ -95,3 +96,10 @@ Current scheduling status:
 - posts can be scheduled from the edit post page
 - `schedule-post` is implemented as a dedicated n8n workflow
 - scheduled posts can be listed and simulated as published
+
+Current approval status:
+
+- posts with `needs_review` can be approved or rejected from `/approvals`
+- draft, needs review, approved, and scheduled posts can be cancelled from `/approvals`
+- `review-post` is implemented as a dedicated n8n workflow export
+- approval decisions write workflow log rows

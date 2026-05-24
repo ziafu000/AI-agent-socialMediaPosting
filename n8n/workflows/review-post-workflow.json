@@ -1,0 +1,380 @@
+{
+  "createdAt": "2026-05-24T00:00:00.000Z",
+  "updatedAt": "2026-05-24T00:00:00.000Z",
+  "id": "reviewPostWorkflowImport",
+  "name": "Review Post",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "review-post",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-review-post",
+      "name": "Webhook",
+      "webhookId": "7a0fd0fb-4a0e-43be-8fd8-9d6a7ef533d0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedActions = [\"approve\", \"reject\", \"cancel\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireAction(field, label) {\n  const value = String(body[field] ?? \"\").trim().toLowerCase();\n  if (!allowedActions.includes(value)) errors.push(label + \" is invalid\");\n  return value;\n}\n\nconst id = requirePositiveInteger(\"id\", \"Post ID\");\nconst action = requireAction(\"action\", \"Review action\");\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{ json: { valid: true, body: { id, action } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "validate-review-post",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-review-post",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0],
+      "id": "if-review-post",
+      "name": "Is Valid"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [660, 220],
+      "id": "respond-validation-error-review-post",
+      "name": "Respond Validation Error"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, status\nFROM posts\nWHERE id = {{ $('Validate Input').item.json.body.id }}\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [660, -140],
+      "id": "find-post-review-post",
+      "name": "Find Post",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "BKYkXhg7gKhGGXMN",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "post-found-review-post",
+              "leftValue": "={{ $json.id !== undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [880, -140],
+      "id": "post-found-review-post",
+      "name": "Post Found"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: \"Post not found\", error: \"The requested post does not exist\" } }}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [1100, 80],
+      "id": "respond-post-not-found-review-post",
+      "name": "Respond Post Not Found"
+    },
+    {
+      "parameters": {
+        "jsCode": "const post = $json;\nconst body = $('Validate Input').item.json.body;\nconst actionConfig = {\n  approve: {\n    allowedStatuses: [\"needs_review\"],\n    nextStatus: \"approved\",\n    eventType: \"approve_post\",\n    message: \"Post approved successfully\",\n    errorMessage: \"\"\n  },\n  reject: {\n    allowedStatuses: [\"needs_review\"],\n    nextStatus: \"cancelled\",\n    eventType: \"reject_post\",\n    message: \"Post rejected successfully\",\n    errorMessage: \"Rejected in approval workflow\"\n  },\n  cancel: {\n    allowedStatuses: [\"draft\", \"needs_review\", \"approved\", \"scheduled\"],\n    nextStatus: \"cancelled\",\n    eventType: \"cancel_post\",\n    message: \"Post cancelled successfully\",\n    errorMessage: \"Cancelled in approval workflow\"\n  }\n};\n\nconst config = actionConfig[body.action];\nconst previousStatus = String(post.status ?? \"\").trim();\n\nif (!config.allowedStatuses.includes(previousStatus)) {\n  return [{\n    json: {\n      valid_transition: false,\n      response: {\n        success: false,\n        message: \"Invalid status transition\",\n        error: `Cannot ${body.action} a post with status ${previousStatus}`\n      }\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    valid_transition: true,\n    body: {\n      id: body.id,\n      action: body.action,\n      previous_status: previousStatus,\n      next_status: config.nextStatus,\n      event_type: config.eventType,\n      message: config.message,\n      error_message: config.errorMessage\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -220],
+      "id": "validate-review-transition",
+      "name": "Validate Transition"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "review-transition-valid",
+              "leftValue": "={{ $json.valid_transition }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1320, -220],
+      "id": "review-transition-valid",
+      "name": "Transition Valid"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [1540, 20],
+      "id": "respond-transition-error-review-post",
+      "name": "Respond Transition Error"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE posts\nSET\n  status = '{{ $('Validate Transition').item.json.body.next_status }}',\n  scheduled_at = CASE\n    WHEN '{{ $('Validate Transition').item.json.body.next_status }}' = 'cancelled' THEN NULL\n    ELSE scheduled_at\n  END,\n  error_message = NULLIF('{{ $('Validate Transition').item.json.body.error_message }}', ''),\n  updated_at = CURRENT_TIMESTAMP\nWHERE id = {{ $('Validate Transition').item.json.body.id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1540, -300],
+      "id": "update-review-post",
+      "name": "Update Review Status",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "BKYkXhg7gKhGGXMN",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_logs (\n  workflow_name,\n  event_type,\n  status,\n  input_payload,\n  output_payload\n)\nVALUES (\n  'Review Post',\n  '{{ $('Validate Transition').item.json.body.event_type }}',\n  'success',\n  JSON_OBJECT(\n    'id', {{ $('Validate Transition').item.json.body.id }},\n    'action', '{{ $('Validate Transition').item.json.body.action }}',\n    'previous_status', '{{ $('Validate Transition').item.json.body.previous_status }}'\n  ),\n  JSON_OBJECT(\n    'message', '{{ $('Validate Transition').item.json.body.message }}',\n    'status', '{{ $('Validate Transition').item.json.body.next_status }}'\n  )\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1760, -300],
+      "id": "log-review-post",
+      "name": "Log Review",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "BKYkXhg7gKhGGXMN",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: $('Validate Transition').item.json.body.message, status: $('Validate Transition').item.json.body.next_status } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [1980, -300],
+      "id": "respond-review-post",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid": {
+      "main": [
+        [
+          {
+            "node": "Find Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Post": {
+      "main": [
+        [
+          {
+            "node": "Post Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Found": {
+      "main": [
+        [
+          {
+            "node": "Validate Transition",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Post Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Transition": {
+      "main": [
+        [
+          {
+            "node": "Transition Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transition Valid": {
+      "main": [
+        [
+          {
+            "node": "Update Review Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Transition Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Review Status": {
+      "main": [
+        [
+          {
+            "node": "Log Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Review": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": null,
+  "triggerCount": 1,
+  "tags": []
+}

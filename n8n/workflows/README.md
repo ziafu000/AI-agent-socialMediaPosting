@@ -6,6 +6,7 @@ Files:
 
 - `local-active-workflows.json`: current exported workflows from local n8n
 - `local-active-workflows.validation.json`: current validated export kept in sync with the running local n8n instance
+- `review-post-workflow.json`: importable workflow for the approval milestone
 
 Current sync flow:
 

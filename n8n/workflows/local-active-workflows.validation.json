@@ -1,10 +1,681 @@
 [
     {
+        "updatedAt": "2026-05-24T14:37:56.000Z",
+        "createdAt": "2026-04-28T12:56:50.389Z",
+        "id": "XPtYQtBMQ3dGrpZn",
+        "name": "Generate Content Ideas",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "generate-content-ideas",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    0,
+                    0
+                ],
+                "id": "webhook-generate-content-ideas",
+                "name": "Webhook",
+                "webhookId": "70962439-758a-4297-93f9-c937ff018b6a"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedPillars = [\"education\", \"trust\", \"engagement\", \"conversion\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction optionalText(field) {\n  return String(body[field] ?? \"\").trim();\n}\n\nfunction requireStringArray(field, label, allowedValues) {\n  const value = Array.isArray(body[field]) ? body[field] : [];\n  const normalizedValues = value.map((item) => String(item ?? \"\").trim().toLowerCase()).filter(Boolean);\n\n  if (normalizedValues.length === 0) {\n    errors.push(label + \" is required\");\n    return [];\n  }\n\n  if (normalizedValues.some((item) => !allowedValues.includes(item))) {\n    errors.push(label + \" contains an invalid value\");\n  }\n\n  return [...new Set(normalizedValues)];\n}\n\nconst customerId = requirePositiveInteger(\"customer_id\", \"Customer ID\");\nconst brandProfileId = requirePositiveInteger(\"brand_profile_id\", \"Brand profile ID\");\nconst numberOfPosts = requirePositiveInteger(\"number_of_posts\", \"Number of posts\");\nconst platforms = requireStringArray(\"platforms\", \"Platforms\", allowedPlatforms);\nconst contentPillars = requireStringArray(\"content_pillars\", \"Content pillars\", allowedPillars);\nconst campaign = optionalText(\"campaign\");\nconst offer = optionalText(\"offer\");\nconst callToAction = optionalText(\"call_to_action\");\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      customer_id: customerId,\n      brand_profile_id: brandProfileId,\n      number_of_posts: numberOfPosts,\n      platforms,\n      content_pillars: contentPillars,\n      campaign,\n      offer,\n      call_to_action: callToAction\n    }\n  }\n}];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    224,
+                    0
+                ],
+                "id": "validate-generate-content-ideas",
+                "name": "Validate Input"
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 2
+                        },
+                        "conditions": [
+                            {
+                                "id": "if-generate-content-ideas",
+                                "leftValue": "={{ $json.valid }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    448,
+                    0
+                ],
+                "id": "if-generate-content-ideas",
+                "name": "Is Valid"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body;\nconst topicTemplates = {\n  education: [\n    \"How to avoid common mistakes with {offer}\",\n    \"A quick checklist for {campaign}\",\n    \"What customers should know before choosing {offer}\"\n  ],\n  trust: [\n    \"What a reliable {offer} process looks like\",\n    \"Why consistency matters in {campaign}\",\n    \"Questions to ask before committing to {offer}\"\n  ],\n  engagement: [\n    \"What is your biggest challenge with {campaign}?\",\n    \"Myth or fact about {offer}\",\n    \"A fast opinion check for your audience\"\n  ],\n  conversion: [\n    \"When it is time to take the next step on {offer}\",\n    \"Who gets the best result from {offer}\",\n    \"A simple offer invite for {campaign}\"\n  ]\n};\n\nconst goals = {\n  education: \"build_trust\",\n  trust: \"proof\",\n  engagement: \"conversation\",\n  conversion: \"generate_leads\"\n};\n\nfunction fillTemplate(template, values) {\n  return template.replace(/\\{(\\w+)\\}/g, (_, key) => values[key] ?? \"\");\n}\n\nfunction buildHashtagSeed(input) {\n  return String(input ?? \"\")\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .split(/\\s+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((word) => `#${word}`)\n    .join(\" \");\n}\n\nconst campaign = body.campaign || \"your campaign\";\nconst offer = body.offer || \"your offer\";\nconst callToAction = body.call_to_action || \"Send a message to learn more\";\nconst count = body.number_of_posts;\nconst posts = [];\n\nbody.platforms.forEach((platform) => {\n  for (let index = 0; index < count; index += 1) {\n    const pillar = body.content_pillars[index % body.content_pillars.length];\n    const templates = topicTemplates[pillar];\n    const topic = fillTemplate(templates[index % templates.length], {\n      campaign,\n      offer\n    });\n\n    posts.push({\n      platform,\n      topic,\n      content_pillar: pillar,\n      goal: goals[pillar],\n      caption: `Stub idea for ${platform}. Focus on ${campaign}. Offer: ${offer}. CTA: ${callToAction}.`,\n      hashtags: [\n        buildHashtagSeed(platform),\n        buildHashtagSeed(campaign),\n        buildHashtagSeed(offer)\n      ].filter(Boolean).join(\" \")\n    });\n  }\n});\n\nreturn [{ json: { success: true, posts } }];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    688,
+                    32
+                ],
+                "id": "generate-stub-ideas",
+                "name": "Generate Stub Ideas"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ $json }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    880,
+                    -128
+                ],
+                "id": "respond-generate-content-ideas",
+                "name": "Respond to Webhook"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ $json.response }}",
+                    "options": {
+                        "responseCode": 400
+                    }
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    672,
+                    224
+                ],
+                "id": "respond-validation-error-generate-content-ideas",
+                "name": "Respond Validation Error"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body;\n\nfunction parseJsonContent(content) {\n  const raw = String(content ?? \"\").trim();\n  const cleaned = raw.replace(/^```(?:json)?/i, \"\").replace(/```$/i, \"\").trim();\n  try {\n    return JSON.parse(cleaned);\n  } catch {\n    const start = cleaned.indexOf(\"{\");\n    const end = cleaned.lastIndexOf(\"}\");\n    if (start >= 0 && end > start) {\n      return JSON.parse(cleaned.slice(start, end + 1));\n    }\n    throw new Error(\"Model did not return valid JSON\");\n  }\n}\n\nasync function callDeepSeek(messages) {\n  const apiKey = $env.DEEPSEEK_API_KEY;\n\n  if (!apiKey) {\n    throw new Error(\"Missing DEEPSEEK_API_KEY in n8n environment\");\n  }\n\n  const data = await this.helpers.httpRequest({\n    method: \"POST\",\n    url: \"https://api.deepseek.com/chat/completions\",\n    headers: {\n      \"Content-Type\": \"application/json\",\n      Authorization: \"Bearer \" + apiKey\n    },\n    body: {\n      model: \"deepseek-chat\",\n      temperature: 0.7,\n      response_format: { type: \"json_object\" },\n      messages\n    },\n    json: true\n  });\n\n  return data?.choices?.[0]?.message?.content;\n}\n\nfunction cleanText(value) {\n  return String(value ?? \"\").trim();\n}\n\nfunction normalizePost(post, index) {\n  const platform = body.platforms.includes(String(post.platform ?? \"\").toLowerCase())\n    ? String(post.platform).toLowerCase()\n    : body.platforms[index % body.platforms.length];\n  const pillar = body.content_pillars.includes(String(post.content_pillar ?? \"\").toLowerCase())\n    ? String(post.content_pillar).toLowerCase()\n    : body.content_pillars[index % body.content_pillars.length];\n\n  return {\n    platform,\n    topic: cleanText(post.topic) || `Content idea ${index + 1}`,\n    content_pillar: pillar,\n    goal: cleanText(post.goal) || \"build_trust\",\n    caption: cleanText(post.caption),\n    hashtags: cleanText(post.hashtags)\n  };\n}\n\ntry {\n  const totalPosts = body.platforms.length * body.number_of_posts;\n  const content = await callDeepSeek([\n    {\n      role: \"system\",\n      content: \"You are a social media content strategist. Return only valid JSON with shape {\\\"success\\\":true,\\\"posts\\\":[{\\\"platform\\\":string,\\\"topic\\\":string,\\\"content_pillar\\\":string,\\\"goal\\\":string,\\\"caption\\\":string,\\\"hashtags\\\":string}]}. Do not include markdown.\"\n    },\n    {\n      role: \"user\",\n      content: JSON.stringify({\n        task: \"Generate social media content ideas\",\n        total_posts: totalPosts,\n        posts_per_platform: body.number_of_posts,\n        platforms: body.platforms,\n        content_pillars: body.content_pillars,\n        campaign: body.campaign,\n        offer: body.offer,\n        call_to_action: body.call_to_action,\n        requirements: [\n          \"Return exactly total_posts posts\",\n          \"Distribute posts across the requested platforms\",\n          \"Use only requested content_pillars\",\n          \"Keep captions concise\",\n          \"Hashtags must be a space-separated string\"\n        ]\n      })\n    }\n  ]);\n\n  const parsed = parseJsonContent(content);\n  const posts = Array.isArray(parsed.posts) ? parsed.posts.slice(0, totalPosts).map(normalizePost) : [];\n\n  if (posts.length === 0) {\n    throw new Error(\"DeepSeek returned no posts\");\n  }\n\n  return [{ json: { success: true, posts } }];\n} catch (error) {\n  return [{ json: { success: false, message: \"AI generation failed\", error: error instanceof Error ? error.message : String(error) } }];\n}"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    672,
+                    -160
+                ],
+                "id": "call-deepseek-content-ideas",
+                "name": "Call DeepSeek Ideas"
+            }
+        ],
+        "connections": {
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Validate Input",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Validate Input": {
+                "main": [
+                    [
+                        {
+                            "node": "Is Valid",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Is Valid": {
+                "main": [
+                    [
+                        {
+                            "node": "Call DeepSeek Ideas",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Respond Validation Error",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Call DeepSeek Ideas": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate"
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "pinData": {},
+        "versionId": "23bcadcb-cb79-4220-a2e8-a8899d650328",
+        "activeVersionId": "23bcadcb-cb79-4220-a2e8-a8899d650328",
+        "versionCounter": 15,
+        "triggerCount": 1,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:14:29.594Z",
+                "createdAt": "2026-05-14T01:14:29.594Z",
+                "role": "workflow:owner",
+                "workflowId": "XPtYQtBMQ3dGrpZn",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
+    },
+    {
+        "updatedAt": "2026-05-24T14:37:59.000Z",
+        "createdAt": "2026-04-28T14:33:39.467Z",
+        "id": "cfPKXKMvTiHRKDro",
+        "name": "Generate Caption",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "generate-caption",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    0,
+                    0
+                ],
+                "id": "webhook-generate-caption",
+                "name": "Webhook",
+                "webhookId": "c2694051-5820-44b2-b015-a060292c0d8c"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireText(field, label) {\n  const value = String(body[field] ?? \"\").trim();\n  if (!value) errors.push(label + \" is required\");\n  return value;\n}\n\nfunction optionalText(field) {\n  return String(body[field] ?? \"\").trim();\n}\n\nconst customerId = requirePositiveInteger(\"customer_id\", \"Customer ID\");\nconst brandProfileId = requirePositiveInteger(\"brand_profile_id\", \"Brand profile ID\");\nconst brandName = requireText(\"brand_name\", \"Brand name\");\nconst platform = requireText(\"platform\", \"Platform\").toLowerCase();\nconst topic = requireText(\"topic\", \"Topic\");\nconst contentPillar = requireText(\"content_pillar\", \"Content pillar\").toLowerCase();\nconst goal = requireText(\"goal\", \"Goal\").toLowerCase();\n\nif (!allowedPlatforms.includes(platform)) {\n  errors.push(\"Platform is invalid\");\n}\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      customer_id: customerId,\n      brand_profile_id: brandProfileId,\n      brand_name: brandName,\n      target_audience: optionalText(\"target_audience\"),\n      brand_voice: optionalText(\"brand_voice\"),\n      default_cta: optionalText(\"default_cta\"),\n      words_to_use: optionalText(\"words_to_use\"),\n      platform,\n      topic,\n      content_pillar: contentPillar,\n      goal,\n      campaign: optionalText(\"campaign\"),\n      offer: optionalText(\"offer\"),\n      call_to_action: optionalText(\"call_to_action\")\n    }\n  }\n}];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    224,
+                    0
+                ],
+                "id": "validate-generate-caption",
+                "name": "Validate Input"
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 2
+                        },
+                        "conditions": [
+                            {
+                                "id": "if-generate-caption",
+                                "leftValue": "={{ $json.valid }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    448,
+                    0
+                ],
+                "id": "if-generate-caption",
+                "name": "Is Valid"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body;\n\nfunction buildHashtagSeed(input) {\n  return String(input ?? \"\")\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .split(/\\s+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((word) => `#${word}`)\n    .join(\" \");\n}\n\nconst audience = body.target_audience || \"your audience\";\nconst voice = body.brand_voice || \"clear\";\nconst callToAction = body.call_to_action || body.default_cta || \"Send a message to learn more\";\nconst preferredWords = body.words_to_use || body.brand_name;\nconst campaign = body.campaign || body.brand_name;\nconst offer = body.offer || \"your offer\";\n\nconst caption = [\n  `${body.brand_name} | ${body.platform.toUpperCase()}`,\n  `Topic: ${body.topic}.`,\n  `Angle: ${body.content_pillar} with goal ${body.goal}.`,\n  `Write for ${audience} in a ${voice} voice.`,\n  `Connect the message to ${campaign} and ${offer}.`,\n  `Use language such as ${preferredWords}.`,\n  `CTA: ${callToAction}.`\n].join(' ');\n\nconst hashtags = [\n  buildHashtagSeed(body.platform),\n  buildHashtagSeed(body.content_pillar),\n  buildHashtagSeed(campaign)\n].filter(Boolean).join(' ');\n\nreturn [{ json: { success: true, caption, hashtags } }];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    672,
+                    -32
+                ],
+                "id": "generate-stub-caption",
+                "name": "Generate Stub Caption"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ $json }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    880,
+                    -128
+                ],
+                "id": "respond-generate-caption",
+                "name": "Respond to Webhook"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ $json.response }}",
+                    "options": {
+                        "responseCode": 400
+                    }
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    672,
+                    224
+                ],
+                "id": "respond-validation-error-generate-caption",
+                "name": "Respond Validation Error"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body;\n\nfunction parseJsonContent(content) {\n  const raw = String(content ?? \"\").trim();\n  const cleaned = raw.replace(/^```(?:json)?/i, \"\").replace(/```$/i, \"\").trim();\n  try {\n    return JSON.parse(cleaned);\n  } catch {\n    const start = cleaned.indexOf(\"{\");\n    const end = cleaned.lastIndexOf(\"}\");\n    if (start >= 0 && end > start) {\n      return JSON.parse(cleaned.slice(start, end + 1));\n    }\n    throw new Error(\"Model did not return valid JSON\");\n  }\n}\n\nasync function callDeepSeek(messages) {\n  const apiKey = $env.DEEPSEEK_API_KEY;\n\n  if (!apiKey) {\n    throw new Error(\"Missing DEEPSEEK_API_KEY in n8n environment\");\n  }\n\n  const data = await this.helpers.httpRequest({\n    method: \"POST\",\n    url: \"https://api.deepseek.com/chat/completions\",\n    headers: {\n      \"Content-Type\": \"application/json\",\n      Authorization: \"Bearer \" + apiKey\n    },\n    body: {\n      model: \"deepseek-chat\",\n      temperature: 0.7,\n      response_format: { type: \"json_object\" },\n      messages\n    },\n    json: true\n  });\n\n  return data?.choices?.[0]?.message?.content;\n}\n\nfunction cleanText(value) {\n  return String(value ?? \"\").trim();\n}\n\ntry {\n  const content = await callDeepSeek([\n    {\n      role: \"system\",\n      content: \"You are a social media copywriter. Return only valid JSON with shape {\\\"success\\\":true,\\\"caption\\\":string,\\\"hashtags\\\":string}. Do not include markdown.\"\n    },\n    {\n      role: \"user\",\n      content: JSON.stringify({\n        task: \"Generate one caption\",\n        brand_name: body.brand_name,\n        target_audience: body.target_audience,\n        brand_voice: body.brand_voice,\n        default_cta: body.default_cta,\n        words_to_use: body.words_to_use,\n        platform: body.platform,\n        topic: body.topic,\n        content_pillar: body.content_pillar,\n        goal: body.goal,\n        campaign: body.campaign,\n        offer: body.offer,\n        call_to_action: body.call_to_action,\n        requirements: [\n          \"Write in a practical marketing style\",\n          \"Keep the caption ready to paste into the platform\",\n          \"Hashtags must be a space-separated string\"\n        ]\n      })\n    }\n  ]);\n\n  const parsed = parseJsonContent(content);\n  const caption = cleanText(parsed.caption);\n\n  if (!caption) {\n    throw new Error(\"DeepSeek returned an empty caption\");\n  }\n\n  return [{ json: { success: true, caption, hashtags: cleanText(parsed.hashtags) } }];\n} catch (error) {\n  return [{ json: { success: false, message: \"AI caption generation failed\", error: error instanceof Error ? error.message : String(error) } }];\n}"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    672,
+                    -160
+                ],
+                "id": "call-deepseek-caption",
+                "name": "Call DeepSeek Caption"
+            }
+        ],
+        "connections": {
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Validate Input",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Validate Input": {
+                "main": [
+                    [
+                        {
+                            "node": "Is Valid",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Is Valid": {
+                "main": [
+                    [
+                        {
+                            "node": "Call DeepSeek Caption",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Respond Validation Error",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Call DeepSeek Caption": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate"
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "pinData": {},
+        "versionId": "c0fcb173-bebc-4727-b421-d62c212389b3",
+        "activeVersionId": "c0fcb173-bebc-4727-b421-d62c212389b3",
+        "versionCounter": 14,
+        "triggerCount": 1,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:14:40.690Z",
+                "createdAt": "2026-05-14T01:14:40.690Z",
+                "role": "workflow:owner",
+                "workflowId": "cfPKXKMvTiHRKDro",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
+    },
+    {
+        "updatedAt": "2026-05-24T14:38:03.000Z",
+        "createdAt": "2026-05-09T13:12:09.993Z",
+        "id": "LOFPVOkYWyFi9X0a",
+        "name": "Rewrite Caption",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "rewrite-caption",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    0,
+                    0
+                ],
+                "id": "webhook-rewrite-caption",
+                "name": "Webhook",
+                "webhookId": "5a9ef6f0-8ac8-4421-930c-2e5691fbdbd3"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedStyles = [\"shorter\", \"more_engaging\", \"more_professional\", \"more_sales_focused\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireText(field, label) {\n  const value = String(body[field] ?? \"\").trim();\n  if (!value) errors.push(label + \" is required\");\n  return value;\n}\n\nfunction optionalText(field) {\n  return String(body[field] ?? \"\").trim();\n}\n\nconst customerId = requirePositiveInteger(\"customer_id\", \"Customer ID\");\nconst brandProfileId = requirePositiveInteger(\"brand_profile_id\", \"Brand profile ID\");\nconst brandName = requireText(\"brand_name\", \"Brand name\");\nconst platform = requireText(\"platform\", \"Platform\").toLowerCase();\nconst topic = requireText(\"topic\", \"Topic\");\nconst contentPillar = requireText(\"content_pillar\", \"Content pillar\").toLowerCase();\nconst goal = requireText(\"goal\", \"Goal\").toLowerCase();\nconst currentCaption = requireText(\"current_caption\", \"Current caption\");\nconst rewriteStyle = requireText(\"rewrite_style\", \"Rewrite style\").toLowerCase();\n\nif (!allowedPlatforms.includes(platform)) {\n  errors.push(\"Platform is invalid\");\n}\n\nif (!allowedStyles.includes(rewriteStyle)) {\n  errors.push(\"Rewrite style is invalid\");\n}\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      customer_id: customerId,\n      brand_profile_id: brandProfileId,\n      brand_name: brandName,\n      target_audience: optionalText(\"target_audience\"),\n      brand_voice: optionalText(\"brand_voice\"),\n      default_cta: optionalText(\"default_cta\"),\n      words_to_use: optionalText(\"words_to_use\"),\n      platform,\n      topic,\n      content_pillar: contentPillar,\n      goal,\n      campaign: optionalText(\"campaign\"),\n      offer: optionalText(\"offer\"),\n      call_to_action: optionalText(\"call_to_action\"),\n      current_caption: currentCaption,\n      current_hashtags: optionalText(\"current_hashtags\"),\n      rewrite_style: rewriteStyle\n    }\n  }\n}];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    224,
+                    0
+                ],
+                "id": "validate-rewrite-caption",
+                "name": "Validate Input"
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 2
+                        },
+                        "conditions": [
+                            {
+                                "id": "if-rewrite-caption",
+                                "leftValue": "={{ $json.valid }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    448,
+                    0
+                ],
+                "id": "if-rewrite-caption",
+                "name": "Is Valid"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body;\n\nfunction buildHashtagSeed(input) {\n  return String(input ?? \"\")\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .split(/\\s+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((word) => `#${word}`)\n    .join(\" \");\n}\n\nfunction compactText(value) {\n  return String(value ?? \"\").replace(/\\s+/g, \" \").trim();\n}\n\nconst styleLabels = {\n  shorter: \"Shorter rewrite\",\n  more_engaging: \"More engaging rewrite\",\n  more_professional: \"More professional rewrite\",\n  more_sales_focused: \"More sales-focused rewrite\"\n};\n\nconst cta = body.call_to_action || body.default_cta || \"Send a message to learn more\";\nconst campaign = body.campaign || body.brand_name;\nconst offer = body.offer || \"your offer\";\nconst voice = body.brand_voice || \"clear\";\nconst audience = body.target_audience || \"your audience\";\nconst baseCaption = compactText(body.current_caption);\n\nconst rewrites = {\n  shorter: `${body.brand_name}: ${body.topic}. ${cta}.`,\n  more_engaging: `${body.topic}? Here is the practical angle for ${audience}: ${baseCaption} What would you add? ${cta}.`,\n  more_professional: `${body.brand_name} shares a ${voice} perspective on ${body.topic}. The key message connects ${campaign} with ${offer}. ${cta}.`,\n  more_sales_focused: `If ${body.topic} is relevant to you, ${offer} may be the next step. ${baseCaption} ${cta}.`\n};\n\nconst caption = `${styleLabels[body.rewrite_style]} | ${rewrites[body.rewrite_style]}`;\nconst hashtags = [\n  body.current_hashtags,\n  buildHashtagSeed(body.platform),\n  buildHashtagSeed(body.content_pillar),\n  buildHashtagSeed(campaign)\n].filter(Boolean).join(\" \");\n\nreturn [{ json: { success: true, caption, hashtags } }];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    672,
+                    -272
+                ],
+                "id": "rewrite-stub-caption",
+                "name": "Rewrite Stub Caption"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ $json }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    880,
+                    -128
+                ],
+                "id": "respond-rewrite-caption",
+                "name": "Respond to Webhook"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ $json.response }}",
+                    "options": {
+                        "responseCode": 400
+                    }
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    672,
+                    224
+                ],
+                "id": "respond-validation-error-rewrite-caption",
+                "name": "Respond Validation Error"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body;\n\nfunction parseJsonContent(content) {\n  const raw = String(content ?? \"\").trim();\n  const cleaned = raw.replace(/^```(?:json)?/i, \"\").replace(/```$/i, \"\").trim();\n  try {\n    return JSON.parse(cleaned);\n  } catch {\n    const start = cleaned.indexOf(\"{\");\n    const end = cleaned.lastIndexOf(\"}\");\n    if (start >= 0 && end > start) {\n      return JSON.parse(cleaned.slice(start, end + 1));\n    }\n    throw new Error(\"Model did not return valid JSON\");\n  }\n}\n\nasync function callDeepSeek(messages) {\n  const apiKey = $env.DEEPSEEK_API_KEY;\n\n  if (!apiKey) {\n    throw new Error(\"Missing DEEPSEEK_API_KEY in n8n environment\");\n  }\n\n  const data = await this.helpers.httpRequest({\n    method: \"POST\",\n    url: \"https://api.deepseek.com/chat/completions\",\n    headers: {\n      \"Content-Type\": \"application/json\",\n      Authorization: \"Bearer \" + apiKey\n    },\n    body: {\n      model: \"deepseek-chat\",\n      temperature: 0.7,\n      response_format: { type: \"json_object\" },\n      messages\n    },\n    json: true\n  });\n\n  return data?.choices?.[0]?.message?.content;\n}\n\nfunction cleanText(value) {\n  return String(value ?? \"\").trim();\n}\n\ntry {\n  const content = await callDeepSeek([\n    {\n      role: \"system\",\n      content: \"You are a social media copy editor. Return only valid JSON with shape {\\\"success\\\":true,\\\"caption\\\":string,\\\"hashtags\\\":string}. Do not include markdown.\"\n    },\n    {\n      role: \"user\",\n      content: JSON.stringify({\n        task: \"Rewrite the current caption\",\n        rewrite_style: body.rewrite_style,\n        brand_name: body.brand_name,\n        target_audience: body.target_audience,\n        brand_voice: body.brand_voice,\n        default_cta: body.default_cta,\n        words_to_use: body.words_to_use,\n        platform: body.platform,\n        topic: body.topic,\n        content_pillar: body.content_pillar,\n        goal: body.goal,\n        campaign: body.campaign,\n        offer: body.offer,\n        call_to_action: body.call_to_action,\n        current_caption: body.current_caption,\n        current_hashtags: body.current_hashtags,\n        requirements: [\n          \"Preserve the core meaning\",\n          \"Apply rewrite_style clearly\",\n          \"Return hashtags as a space-separated string\"\n        ]\n      })\n    }\n  ]);\n\n  const parsed = parseJsonContent(content);\n  const caption = cleanText(parsed.caption);\n\n  if (!caption) {\n    throw new Error(\"DeepSeek returned an empty rewrite\");\n  }\n\n  return [{ json: { success: true, caption, hashtags: cleanText(parsed.hashtags || body.current_hashtags) } }];\n} catch (error) {\n  return [{ json: { success: false, message: \"AI caption rewrite failed\", error: error instanceof Error ? error.message : String(error) } }];\n}"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    672,
+                    -128
+                ],
+                "id": "call-deepseek-rewrite",
+                "name": "Call DeepSeek Rewrite"
+            }
+        ],
+        "connections": {
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Validate Input",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Validate Input": {
+                "main": [
+                    [
+                        {
+                            "node": "Is Valid",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Is Valid": {
+                "main": [
+                    [
+                        {
+                            "node": "Call DeepSeek Rewrite",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Respond Validation Error",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Call DeepSeek Rewrite": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate"
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "pinData": {},
+        "versionId": "fcf980de-b63e-4ee0-b590-3bf92eff63b1",
+        "activeVersionId": "fcf980de-b63e-4ee0-b590-3bf92eff63b1",
+        "versionCounter": 15,
+        "triggerCount": 1,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:14:52.917Z",
+                "createdAt": "2026-05-14T01:14:52.917Z",
+                "role": "workflow:owner",
+                "workflowId": "LOFPVOkYWyFi9X0a",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
+    },
+    {
+        "updatedAt": "2026-05-24T14:38:06.000Z",
         "createdAt": "2026-04-25T11:11:06.310Z",
-        "updatedAt": "2026-04-28T01:33:23.000Z",
         "id": "bB4cL0vOjNMj5gGu",
         "name": "Create Customer",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -220,15 +891,42 @@
         },
         "pinData": {},
         "versionId": "a58eed8c-b8f1-4537-9ba5-f997dc2d62a2",
+        "activeVersionId": "a58eed8c-b8f1-4537-9ba5-f997dc2d62a2",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.499Z",
+                "createdAt": "2026-05-14T01:20:48.499Z",
+                "role": "workflow:owner",
+                "workflowId": "bB4cL0vOjNMj5gGu",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:10.000Z",
         "createdAt": "2026-04-25T11:46:35.739Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "q3dB04Hh2tqxKtdc",
         "name": "Save Brand Profile",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -562,15 +1260,42 @@
         },
         "pinData": {},
         "versionId": "10827fe2-250b-4eee-8938-511f7766676f",
+        "activeVersionId": "10827fe2-250b-4eee-8938-511f7766676f",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.516Z",
+                "createdAt": "2026-05-14T01:20:48.516Z",
+                "role": "workflow:owner",
+                "workflowId": "q3dB04Hh2tqxKtdc",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:13.000Z",
         "createdAt": "2026-04-25T11:57:27.895Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "6FFIeXBzAFvmllM4",
         "name": "Create Post",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -904,15 +1629,42 @@
         },
         "pinData": {},
         "versionId": "e677d193-8a47-4b99-b3de-837731509fe3",
+        "activeVersionId": "e677d193-8a47-4b99-b3de-837731509fe3",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.524Z",
+                "createdAt": "2026-05-14T01:20:48.524Z",
+                "role": "workflow:owner",
+                "workflowId": "6FFIeXBzAFvmllM4",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:17.000Z",
         "createdAt": "2026-04-25T12:43:30.951Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "5V50vxishWDkcU4g",
         "name": "List Workflow Logs",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -1002,15 +1754,42 @@
         },
         "pinData": {},
         "versionId": "ed72c91f-746b-4344-b7d0-5e4cfbd5f142",
+        "activeVersionId": "ed72c91f-746b-4344-b7d0-5e4cfbd5f142",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.531Z",
+                "createdAt": "2026-05-14T01:20:48.531Z",
+                "role": "workflow:owner",
+                "workflowId": "5V50vxishWDkcU4g",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:21.000Z",
         "createdAt": "2026-04-26T14:27:16.303Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "sXIxjlXQV0iaG7LH",
         "name": "List Scheduled Posts",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -1100,15 +1879,42 @@
         },
         "pinData": {},
         "versionId": "98224c80-bcdf-4365-9f08-857d9623d1f4",
+        "activeVersionId": "98224c80-bcdf-4365-9f08-857d9623d1f4",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.537Z",
+                "createdAt": "2026-05-14T01:20:48.537Z",
+                "role": "workflow:owner",
+                "workflowId": "sXIxjlXQV0iaG7LH",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:24.000Z",
         "createdAt": "2026-04-26T14:40:08.367Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "listPostsWorkflowImport",
         "name": "List Posts",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -1198,15 +2004,42 @@
         },
         "pinData": {},
         "versionId": "2532978e-7d26-4346-8a25-c71f04d9904d",
+        "activeVersionId": "2532978e-7d26-4346-8a25-c71f04d9904d",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.543Z",
+                "createdAt": "2026-05-14T01:20:48.543Z",
+                "role": "workflow:owner",
+                "workflowId": "listPostsWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:28.000Z",
         "createdAt": "2026-04-26T14:45:28.467Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "updatePostWorkflowImport",
         "name": "Update Post",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -1524,15 +2357,42 @@
         },
         "pinData": {},
         "versionId": "36c2ff87-cc83-41f6-8a26-0c0f4e3ba26d",
+        "activeVersionId": "36c2ff87-cc83-41f6-8a26-0c0f4e3ba26d",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.550Z",
+                "createdAt": "2026-05-14T01:20:48.550Z",
+                "role": "workflow:owner",
+                "workflowId": "updatePostWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:31.000Z",
         "createdAt": "2026-04-26T14:57:51.744Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "listCustomersWorkflowImport",
         "name": "List Customers",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -1622,15 +2482,42 @@
         },
         "pinData": {},
         "versionId": "6fd68f53-8672-4139-8d99-3c2c5b4b6460",
+        "activeVersionId": "6fd68f53-8672-4139-8d99-3c2c5b4b6460",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.557Z",
+                "createdAt": "2026-05-14T01:20:48.557Z",
+                "role": "workflow:owner",
+                "workflowId": "listCustomersWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:35.000Z",
         "createdAt": "2026-04-26T14:57:51.746Z",
-        "updatedAt": "2026-04-28T01:34:15.000Z",
         "id": "getCustomerDetailWorkflowImport",
         "name": "Get Customer Detail",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -1879,15 +2766,42 @@
         },
         "pinData": {},
         "versionId": "0723b924-ccbe-44cd-b245-eade43aeb8ee",
+        "activeVersionId": "0723b924-ccbe-44cd-b245-eade43aeb8ee",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.563Z",
+                "createdAt": "2026-05-14T01:20:48.563Z",
+                "role": "workflow:owner",
+                "workflowId": "getCustomerDetailWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:38.000Z",
         "createdAt": "2026-04-26T14:57:51.746Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "listBrandProfilesWorkflowImport",
         "name": "List Brand Profiles",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -1977,15 +2891,42 @@
         },
         "pinData": {},
         "versionId": "2e44c7c6-5b80-444b-b76a-9bb2b6dceacb",
+        "activeVersionId": "2e44c7c6-5b80-444b-b76a-9bb2b6dceacb",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.568Z",
+                "createdAt": "2026-05-14T01:20:48.568Z",
+                "role": "workflow:owner",
+                "workflowId": "listBrandProfilesWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:42.000Z",
         "createdAt": "2026-04-26T14:57:51.746Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "updateBrandProfileWorkflowImport",
         "name": "Update Brand Profile",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -2303,15 +3244,42 @@
         },
         "pinData": {},
         "versionId": "2687308d-9b71-48f2-ab14-64f997a84354",
+        "activeVersionId": "2687308d-9b71-48f2-ab14-64f997a84354",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.576Z",
+                "createdAt": "2026-05-14T01:20:48.576Z",
+                "role": "workflow:owner",
+                "workflowId": "updateBrandProfileWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:45.000Z",
         "createdAt": "2026-04-26T14:57:51.746Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "runScheduleSimulationWorkflowImport",
         "name": "Run Schedule Simulation",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -2434,15 +3402,42 @@
         },
         "pinData": {},
         "versionId": "23f91581-80b1-46ab-af31-2fefc2d566ca",
+        "activeVersionId": "23f91581-80b1-46ab-af31-2fefc2d566ca",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.584Z",
+                "createdAt": "2026-05-14T01:20:48.584Z",
+                "role": "workflow:owner",
+                "workflowId": "runScheduleSimulationWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
+        "updatedAt": "2026-05-24T14:38:49.000Z",
         "createdAt": "2026-04-26T14:57:51.746Z",
-        "updatedAt": "2026-04-26T15:36:56.000Z",
         "id": "dashboardSummaryWorkflowImport",
         "name": "Dashboard Summary",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
@@ -2532,20 +3527,47 @@
         },
         "pinData": {},
         "versionId": "858ceaaa-cdc7-4606-bf95-3a230b707ce0",
+        "activeVersionId": "858ceaaa-cdc7-4606-bf95-3a230b707ce0",
+        "versionCounter": 9,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.590Z",
+                "createdAt": "2026-05-14T01:20:48.590Z",
+                "role": "workflow:owner",
+                "workflowId": "dashboardSummaryWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     },
     {
-        "createdAt": "2026-04-28T12:56:50.389Z",
-        "updatedAt": "2026-04-28T12:56:53.000Z",
-        "id": "XPtYQtBMQ3dGrpZn",
-        "name": "Generate Content Ideas",
+        "updatedAt": "2026-05-24T14:38:52.000Z",
+        "createdAt": "2026-05-14T00:35:38.201Z",
+        "id": "jzDl6Xc7fyYmo53g",
+        "name": "Schedule Post",
+        "description": null,
         "active": true,
+        "isArchived": false,
         "nodes": [
             {
                 "parameters": {
                     "httpMethod": "POST",
-                    "path": "generate-content-ideas",
+                    "path": "schedule-post",
                     "responseMode": "responseNode",
                     "options": {}
                 },
@@ -2555,12 +3577,13 @@
                     0,
                     0
                 ],
-                "id": "webhook-generate-content-ideas",
-                "name": "Webhook"
+                "id": "webhook-schedule-post",
+                "name": "Webhook",
+                "webhookId": "6e0b41a1-8d12-4f7e-94e5-56e862f8a594"
             },
             {
                 "parameters": {
-                    "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedPlatforms = [\"facebook\", \"instagram\", \"linkedin\", \"tiktok\"];\nconst allowedPillars = [\"education\", \"trust\", \"engagement\", \"conversion\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction optionalText(field) {\n  return String(body[field] ?? \"\").trim();\n}\n\nfunction requireStringArray(field, label, allowedValues) {\n  const value = Array.isArray(body[field]) ? body[field] : [];\n  const normalizedValues = value.map((item) => String(item ?? \"\").trim().toLowerCase()).filter(Boolean);\n\n  if (normalizedValues.length === 0) {\n    errors.push(label + \" is required\");\n    return [];\n  }\n\n  if (normalizedValues.some((item) => !allowedValues.includes(item))) {\n    errors.push(label + \" contains an invalid value\");\n  }\n\n  return [...new Set(normalizedValues)];\n}\n\nconst customerId = requirePositiveInteger(\"customer_id\", \"Customer ID\");\nconst brandProfileId = requirePositiveInteger(\"brand_profile_id\", \"Brand profile ID\");\nconst numberOfPosts = requirePositiveInteger(\"number_of_posts\", \"Number of posts\");\nconst platforms = requireStringArray(\"platforms\", \"Platforms\", allowedPlatforms);\nconst contentPillars = requireStringArray(\"content_pillars\", \"Content pillars\", allowedPillars);\nconst campaign = optionalText(\"campaign\");\nconst offer = optionalText(\"offer\");\nconst callToAction = optionalText(\"call_to_action\");\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{\n  json: {\n    valid: true,\n    body: {\n      customer_id: customerId,\n      brand_profile_id: brandProfileId,\n      number_of_posts: numberOfPosts,\n      platforms,\n      content_pillars: contentPillars,\n      campaign,\n      offer,\n      call_to_action: callToAction\n    }\n  }\n}];"
+                    "jsCode": "const body = $json.body ?? {};\nconst errors = [];\n\nfunction escapeSql(value) {\n  return String(value ?? \"\").trim().replace(/'/g, \"''\");\n}\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nconst id = requirePositiveInteger(\"id\", \"Post ID\");\nlet scheduledAt = String(body.scheduled_at ?? \"\").trim().replace(\"T\", \" \");\n\nif (!scheduledAt) {\n  errors.push(\"Scheduled at is required\");\n}\n\nif (scheduledAt && Number.isNaN(Date.parse(scheduledAt))) {\n  errors.push(\"Scheduled at is invalid\");\n}\n\nscheduledAt = escapeSql(scheduledAt);\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{ json: { valid: true, body: { id, scheduled_at: scheduledAt } } }];"
                 },
                 "type": "n8n-nodes-base.code",
                 "typeVersion": 2,
@@ -2568,7 +3591,7 @@
                     220,
                     0
                 ],
-                "id": "validate-generate-content-ideas",
+                "id": "validate-schedule-post",
                 "name": "Validate Input"
             },
             {
@@ -2582,7 +3605,7 @@
                         },
                         "conditions": [
                             {
-                                "id": "if-generate-content-ideas",
+                                "id": "if-schedule-post",
                                 "leftValue": "={{ $json.valid }}",
                                 "rightValue": true,
                                 "operator": {
@@ -2602,36 +3625,8 @@
                     440,
                     0
                 ],
-                "id": "if-generate-content-ideas",
+                "id": "if-schedule-post",
                 "name": "Is Valid"
-            },
-            {
-                "parameters": {
-                    "jsCode": "const body = $json.body;\nconst topicTemplates = {\n  education: [\n    \"How to avoid common mistakes with {offer}\",\n    \"A quick checklist for {campaign}\",\n    \"What customers should know before choosing {offer}\"\n  ],\n  trust: [\n    \"What a reliable {offer} process looks like\",\n    \"Why consistency matters in {campaign}\",\n    \"Questions to ask before committing to {offer}\"\n  ],\n  engagement: [\n    \"What is your biggest challenge with {campaign}?\",\n    \"Myth or fact about {offer}\",\n    \"A fast opinion check for your audience\"\n  ],\n  conversion: [\n    \"When it is time to take the next step on {offer}\",\n    \"Who gets the best result from {offer}\",\n    \"A simple offer invite for {campaign}\"\n  ]\n};\n\nconst goals = {\n  education: \"build_trust\",\n  trust: \"proof\",\n  engagement: \"conversation\",\n  conversion: \"generate_leads\"\n};\n\nfunction fillTemplate(template, values) {\n  return template.replace(/\\{(\\w+)\\}/g, (_, key) => values[key] ?? \"\");\n}\n\nfunction buildHashtagSeed(input) {\n  return String(input ?? \"\")\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .split(/\\s+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((word) => `#${word}`)\n    .join(\" \");\n}\n\nconst campaign = body.campaign || \"your campaign\";\nconst offer = body.offer || \"your offer\";\nconst callToAction = body.call_to_action || \"Send a message to learn more\";\nconst count = body.number_of_posts;\nconst posts = [];\n\nbody.platforms.forEach((platform) => {\n  for (let index = 0; index < count; index += 1) {\n    const pillar = body.content_pillars[index % body.content_pillars.length];\n    const templates = topicTemplates[pillar];\n    const topic = fillTemplate(templates[index % templates.length], {\n      campaign,\n      offer\n    });\n\n    posts.push({\n      platform,\n      topic,\n      content_pillar: pillar,\n      goal: goals[pillar],\n      caption: `Stub idea for ${platform}. Focus on ${campaign}. Offer: ${offer}. CTA: ${callToAction}.`,\n      hashtags: [\n        buildHashtagSeed(platform),\n        buildHashtagSeed(campaign),\n        buildHashtagSeed(offer)\n      ].filter(Boolean).join(\" \")\n    });\n  }\n});\n\nreturn [{ json: { success: true, posts } }];"
-                },
-                "type": "n8n-nodes-base.code",
-                "typeVersion": 2,
-                "position": [
-                    660,
-                    -120
-                ],
-                "id": "generate-stub-ideas",
-                "name": "Generate Stub Ideas"
-            },
-            {
-                "parameters": {
-                    "respondWith": "json",
-                    "responseBody": "={{ $json }}",
-                    "options": {}
-                },
-                "type": "n8n-nodes-base.respondToWebhook",
-                "typeVersion": 1.2,
-                "position": [
-                    880,
-                    -120
-                ],
-                "id": "respond-generate-content-ideas",
-                "name": "Respond to Webhook"
             },
             {
                 "parameters": {
@@ -2647,8 +3642,140 @@
                     660,
                     220
                 ],
-                "id": "respond-validation-error-generate-content-ideas",
+                "id": "respond-validation-error-schedule-post",
                 "name": "Respond Validation Error"
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "SELECT id\nFROM posts\nWHERE id = {{ $('Validate Input').item.json.body.id }}\nLIMIT 1;",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.mySql",
+                "typeVersion": 2.4,
+                "position": [
+                    660,
+                    -140
+                ],
+                "id": "find-post-schedule-post",
+                "name": "Find Post",
+                "alwaysOutputData": true,
+                "credentials": {
+                    "mySql": {
+                        "id": "BKYkXhg7gKhGGXMN",
+                        "name": "MySQL account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 2
+                        },
+                        "conditions": [
+                            {
+                                "id": "post-found-schedule-post",
+                                "leftValue": "={{ $json.id !== undefined }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    880,
+                    -140
+                ],
+                "id": "post-found-schedule-post",
+                "name": "Post Found"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}",
+                    "options": {
+                        "responseCode": 404
+                    }
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    1100,
+                    80
+                ],
+                "id": "respond-post-not-found-schedule-post",
+                "name": "Respond Post Not Found"
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "UPDATE posts\nSET\n  status = 'scheduled',\n  scheduled_at = '{{ $('Validate Input').item.json.body.scheduled_at }}',\n  updated_at = CURRENT_TIMESTAMP\nWHERE id = {{ $('Validate Input').item.json.body.id }};",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.mySql",
+                "typeVersion": 2.4,
+                "position": [
+                    1100,
+                    -220
+                ],
+                "id": "update-schedule-post",
+                "name": "Update Schedule",
+                "alwaysOutputData": true,
+                "credentials": {
+                    "mySql": {
+                        "id": "BKYkXhg7gKhGGXMN",
+                        "name": "MySQL account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "INSERT INTO workflow_logs (\n  workflow_name,\n  event_type,\n  status,\n  input_payload,\n  output_payload\n)\nVALUES (\n  'Schedule Post',\n  'schedule_post',\n  'success',\n  JSON_OBJECT(\n    'id', {{ $('Validate Input').item.json.body.id }},\n    'scheduled_at', '{{ $('Validate Input').item.json.body.scheduled_at }}'\n  ),\n  JSON_OBJECT('message', 'Post scheduled successfully')\n);",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.mySql",
+                "typeVersion": 2.4,
+                "position": [
+                    1320,
+                    -220
+                ],
+                "id": "log-schedule-post",
+                "name": "Log Schedule",
+                "alwaysOutputData": true,
+                "credentials": {
+                    "mySql": {
+                        "id": "BKYkXhg7gKhGGXMN",
+                        "name": "MySQL account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "{\n  \"success\": true,\n  \"message\": \"Post scheduled successfully\"\n}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    1540,
+                    -220
+                ],
+                "id": "respond-schedule-post",
+                "name": "Respond to Webhook"
             }
         ],
         "connections": {
@@ -2678,7 +3805,7 @@
                 "main": [
                     [
                         {
-                            "node": "Generate Stub Ideas",
+                            "node": "Find Post",
                             "type": "main",
                             "index": 0
                         }
@@ -2692,7 +3819,47 @@
                     ]
                 ]
             },
-            "Generate Stub Ideas": {
+            "Find Post": {
+                "main": [
+                    [
+                        {
+                            "node": "Post Found",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Post Found": {
+                "main": [
+                    [
+                        {
+                            "node": "Update Schedule",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Respond Post Not Found",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Update Schedule": {
+                "main": [
+                    [
+                        {
+                            "node": "Log Schedule",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Log Schedule": {
                 "main": [
                     [
                         {
@@ -2712,8 +3879,479 @@
             "templateCredsSetupCompleted": true
         },
         "pinData": {},
-        "versionId": null,
+        "versionId": "55546845-467a-435f-bc9d-3ff34989b894",
+        "activeVersionId": "55546845-467a-435f-bc9d-3ff34989b894",
+        "versionCounter": 10,
         "triggerCount": 1,
-        "tags": []
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-14T01:20:48.611Z",
+                "createdAt": "2026-05-14T01:20:48.611Z",
+                "role": "workflow:owner",
+                "workflowId": "jzDl6Xc7fyYmo53g",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
+    },
+    {
+        "updatedAt": "2026-05-24T15:45:20.000Z",
+        "createdAt": "2026-05-24T00:00:00.000Z",
+        "id": "reviewPostWorkflowImport",
+        "name": "Review Post",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "review-post",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    0,
+                    0
+                ],
+                "id": "webhook-review-post",
+                "name": "Webhook",
+                "webhookId": "7a0fd0fb-4a0e-43be-8fd8-9d6a7ef533d0"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $json.body ?? {};\nconst errors = [];\nconst allowedActions = [\"approve\", \"reject\", \"cancel\"];\n\nfunction requirePositiveInteger(field, label) {\n  const value = Number(body[field]);\n  if (!Number.isInteger(value) || value < 1) errors.push(label + \" must be a positive number\");\n  return value;\n}\n\nfunction requireAction(field, label) {\n  const value = String(body[field] ?? \"\").trim().toLowerCase();\n  if (!allowedActions.includes(value)) errors.push(label + \" is invalid\");\n  return value;\n}\n\nconst id = requirePositiveInteger(\"id\", \"Post ID\");\nconst action = requireAction(\"action\", \"Review action\");\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, response: { success: false, message: \"Validation failed\", error: errors.join(\"; \") } } }];\n}\n\nreturn [{ json: { valid: true, body: { id, action } } }];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    220,
+                    0
+                ],
+                "id": "validate-review-post",
+                "name": "Validate Input"
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 2
+                        },
+                        "conditions": [
+                            {
+                                "id": "if-review-post",
+                                "leftValue": "={{ $json.valid }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    440,
+                    0
+                ],
+                "id": "if-review-post",
+                "name": "Is Valid"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ $json.response }}",
+                    "options": {
+                        "responseCode": 400
+                    }
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    660,
+                    220
+                ],
+                "id": "respond-validation-error-review-post",
+                "name": "Respond Validation Error"
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "SELECT id, status\nFROM posts\nWHERE id = {{ $('Validate Input').item.json.body.id }}\nLIMIT 1;",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.mySql",
+                "typeVersion": 2.4,
+                "position": [
+                    660,
+                    -140
+                ],
+                "id": "find-post-review-post",
+                "name": "Find Post",
+                "alwaysOutputData": true,
+                "credentials": {
+                    "mySql": {
+                        "id": "BKYkXhg7gKhGGXMN",
+                        "name": "MySQL account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 2
+                        },
+                        "conditions": [
+                            {
+                                "id": "post-found-review-post",
+                                "leftValue": "={{ $json.id !== undefined }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    880,
+                    -140
+                ],
+                "id": "post-found-review-post",
+                "name": "Post Found"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ { success: false, message: \"Post not found\", error: \"The requested post does not exist\" } }}",
+                    "options": {
+                        "responseCode": 404
+                    }
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    1100,
+                    80
+                ],
+                "id": "respond-post-not-found-review-post",
+                "name": "Respond Post Not Found"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const post = $json;\nconst body = $('Validate Input').item.json.body;\nconst actionConfig = {\n  approve: {\n    allowedStatuses: [\"needs_review\"],\n    nextStatus: \"approved\",\n    eventType: \"approve_post\",\n    message: \"Post approved successfully\",\n    errorMessage: \"\"\n  },\n  reject: {\n    allowedStatuses: [\"needs_review\"],\n    nextStatus: \"cancelled\",\n    eventType: \"reject_post\",\n    message: \"Post rejected successfully\",\n    errorMessage: \"Rejected in approval workflow\"\n  },\n  cancel: {\n    allowedStatuses: [\"draft\", \"needs_review\", \"approved\", \"scheduled\"],\n    nextStatus: \"cancelled\",\n    eventType: \"cancel_post\",\n    message: \"Post cancelled successfully\",\n    errorMessage: \"Cancelled in approval workflow\"\n  }\n};\n\nconst config = actionConfig[body.action];\nconst previousStatus = String(post.status ?? \"\").trim();\n\nif (!config.allowedStatuses.includes(previousStatus)) {\n  return [{\n    json: {\n      valid_transition: false,\n      response: {\n        success: false,\n        message: \"Invalid status transition\",\n        error: `Cannot ${body.action} a post with status ${previousStatus}`\n      }\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    valid_transition: true,\n    body: {\n      id: body.id,\n      action: body.action,\n      previous_status: previousStatus,\n      next_status: config.nextStatus,\n      event_type: config.eventType,\n      message: config.message,\n      error_message: config.errorMessage\n    }\n  }\n}];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1100,
+                    -220
+                ],
+                "id": "validate-review-transition",
+                "name": "Validate Transition"
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 2
+                        },
+                        "conditions": [
+                            {
+                                "id": "review-transition-valid",
+                                "leftValue": "={{ $json.valid_transition }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    1320,
+                    -220
+                ],
+                "id": "review-transition-valid",
+                "name": "Transition Valid"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ $json.response }}",
+                    "options": {
+                        "responseCode": 400
+                    }
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    1540,
+                    20
+                ],
+                "id": "respond-transition-error-review-post",
+                "name": "Respond Transition Error"
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "UPDATE posts\nSET\n  status = '{{ $('Validate Transition').item.json.body.next_status }}',\n  scheduled_at = CASE\n    WHEN '{{ $('Validate Transition').item.json.body.next_status }}' = 'cancelled' THEN NULL\n    ELSE scheduled_at\n  END,\n  error_message = NULLIF('{{ $('Validate Transition').item.json.body.error_message }}', ''),\n  updated_at = CURRENT_TIMESTAMP\nWHERE id = {{ $('Validate Transition').item.json.body.id }};",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.mySql",
+                "typeVersion": 2.4,
+                "position": [
+                    1540,
+                    -300
+                ],
+                "id": "update-review-post",
+                "name": "Update Review Status",
+                "alwaysOutputData": true,
+                "credentials": {
+                    "mySql": {
+                        "id": "BKYkXhg7gKhGGXMN",
+                        "name": "MySQL account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "INSERT INTO workflow_logs (\n  workflow_name,\n  event_type,\n  status,\n  input_payload,\n  output_payload\n)\nVALUES (\n  'Review Post',\n  '{{ $('Validate Transition').item.json.body.event_type }}',\n  'success',\n  JSON_OBJECT(\n    'id', {{ $('Validate Transition').item.json.body.id }},\n    'action', '{{ $('Validate Transition').item.json.body.action }}',\n    'previous_status', '{{ $('Validate Transition').item.json.body.previous_status }}'\n  ),\n  JSON_OBJECT(\n    'message', '{{ $('Validate Transition').item.json.body.message }}',\n    'status', '{{ $('Validate Transition').item.json.body.next_status }}'\n  )\n);",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.mySql",
+                "typeVersion": 2.4,
+                "position": [
+                    1760,
+                    -300
+                ],
+                "id": "log-review-post",
+                "name": "Log Review",
+                "alwaysOutputData": true,
+                "credentials": {
+                    "mySql": {
+                        "id": "BKYkXhg7gKhGGXMN",
+                        "name": "MySQL account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ { success: true, message: $('Validate Transition').item.json.body.message, status: $('Validate Transition').item.json.body.next_status } }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.2,
+                "position": [
+                    1980,
+                    -300
+                ],
+                "id": "respond-review-post",
+                "name": "Respond to Webhook"
+            }
+        ],
+        "connections": {
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Validate Input",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Validate Input": {
+                "main": [
+                    [
+                        {
+                            "node": "Is Valid",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Is Valid": {
+                "main": [
+                    [
+                        {
+                            "node": "Find Post",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Respond Validation Error",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Find Post": {
+                "main": [
+                    [
+                        {
+                            "node": "Post Found",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Post Found": {
+                "main": [
+                    [
+                        {
+                            "node": "Validate Transition",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Respond Post Not Found",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Validate Transition": {
+                "main": [
+                    [
+                        {
+                            "node": "Transition Valid",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Transition Valid": {
+                "main": [
+                    [
+                        {
+                            "node": "Update Review Status",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Respond Transition Error",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Update Review Status": {
+                "main": [
+                    [
+                        {
+                            "node": "Log Review",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Log Review": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1"
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "pinData": {},
+        "versionId": "4df51bff-798c-4cb8-bb64-7210af14a00e",
+        "activeVersionId": "4df51bff-798c-4cb8-bb64-7210af14a00e",
+        "versionCounter": 3,
+        "triggerCount": 1,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-05-24T15:44:59.169Z",
+                "createdAt": "2026-05-24T15:44:59.169Z",
+                "role": "workflow:owner",
+                "workflowId": "reviewPostWorkflowImport",
+                "projectId": "1SmueIEsu1FN9KrP",
+                "project": {
+                    "updatedAt": "2026-05-14T02:11:36.340Z",
+                    "createdAt": "2026-05-14T01:14:07.664Z",
+                    "id": "1SmueIEsu1FN9KrP",
+                    "name": "Gia Phu Nguyen <nguyengiaphuhcm@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "18f0752c-7f8f-4137-a3ff-8b8d40f7859b"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
     }
 ]

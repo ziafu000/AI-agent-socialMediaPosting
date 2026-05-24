@@ -111,6 +111,7 @@ The frontend now includes:
 /app/content-planner
 /app/workflow-logs
 /app/dashboard
+/app/approvals
 ```
 
 Current content planner behavior:
@@ -125,6 +126,13 @@ Current scheduling behavior:
 - post edit page can update post content/status
 - post edit page can call the dedicated `schedule-post` workflow
 - scheduled posts list shows posts with `status = scheduled`
+
+Current approval behavior:
+
+- `/approvals` lists review-related posts
+- posts with `needs_review` can be approved or rejected
+- draft, needs review, approved, and scheduled posts can be cancelled
+- approval actions call the dedicated `review-post` workflow
 
 ## Future pages
 

@@ -112,6 +112,12 @@ export default function Home() {
           </Link>
           <Link
             className="ml-4 mt-4 inline-flex text-sm font-medium text-slate-950 underline"
+            href="/approvals"
+          >
+            Open approvals
+          </Link>
+          <Link
+            className="ml-4 mt-4 inline-flex text-sm font-medium text-slate-950 underline"
             href="/schedule-simulator"
           >
             Open schedule simulator

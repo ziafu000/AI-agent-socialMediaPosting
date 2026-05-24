@@ -28,6 +28,7 @@ Current local scope includes:
 - AI model caption generation through n8n
 - AI model caption rewrite through n8n
 - Dedicated post scheduling workflow
+- Approval workflow for review decisions
 - Scheduled post list
 - Schedule simulation
 - Dashboard summary
@@ -64,6 +65,7 @@ It currently handles:
 - Schedule simulation
 - Temporary DeepSeek-backed AI generation
 - Dedicated post scheduling
+- Approval decisions
 
 Later, it may handle:
 

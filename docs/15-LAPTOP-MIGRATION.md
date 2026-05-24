@@ -340,7 +340,7 @@ docker cp ai_social_n8n:/tmp/verify-workflows.json .\migration-backup\n8n\verify
 Expected current count:
 
 ```text
-16 workflows
+18 workflows
 ```
 
 Expected workflow names:
@@ -362,6 +362,8 @@ Dashboard Summary
 Generate Content Ideas
 Generate Caption
 Rewrite Caption
+Schedule Post
+Review Post
 ```
 
 ## Part 13 - Verify Webhooks

@@ -151,7 +151,7 @@ Tasks:
 Current status:
 
 ```text
-Not started.
+Complete.
 ```
 
 ## Phase 5 - Real social posting
@@ -237,11 +237,12 @@ Completed locally:
 - Dashboard polish
 - Validation and error handling
 - Data consistency cleanup
+- Approval workflow
 - Laptop migration guide
 
 ## Next recommended milestone
 
-- Phase 4.5 approval workflow
+- Phase 5 real social posting
 
 ## Future major milestones
 

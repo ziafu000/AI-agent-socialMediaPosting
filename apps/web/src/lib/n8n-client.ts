@@ -23,6 +23,7 @@ const allowedPostStatuses = [
   "failed",
   "cancelled",
 ];
+const allowedReviewActions = ["approve", "reject", "cancel"];
 
 function toN8nErrorMessage(data: unknown, fallbackMessage: string) {
   if (!data || typeof data !== "object") {
@@ -479,6 +480,34 @@ export async function schedulePost(payload: SchedulePostPayload) {
       scheduled_at: normalizeScheduledAt(payload.scheduled_at, "scheduled"),
     },
     "Failed to schedule post",
+  );
+}
+
+export type ReviewPostAction = "approve" | "reject" | "cancel";
+
+export type ReviewPostPayload = {
+  id: number;
+  action: ReviewPostAction;
+};
+
+export type ReviewPostResponse = {
+  success: boolean;
+  message: string;
+  status: string;
+};
+
+export async function reviewPost(payload: ReviewPostPayload) {
+  return postToN8n<ReviewPostResponse>(
+    process.env.NEXT_PUBLIC_N8N_REVIEW_POST_WEBHOOK_URL,
+    {
+      id: requirePositiveInteger(payload.id, "Post ID"),
+      action: requireAllowedValue(
+        payload.action,
+        "Review action",
+        allowedReviewActions,
+      ) as ReviewPostAction,
+    },
+    "Failed to review post",
   );
 }
 
