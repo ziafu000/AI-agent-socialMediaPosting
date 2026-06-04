@@ -32,11 +32,13 @@ services:
     image: mysql:8.4
     container_name: ai_social_mysql
     restart: unless-stopped
+    command: --default-time-zone=+07:00
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Ho_Chi_Minh
     ports:
       - "${MYSQL_PORT}:3306"
     volumes:
@@ -46,8 +48,9 @@ services:
       - ai_social_network
 
   n8n:
-    image: docker.n8n.io/n8nio/n8n:latest
+    image: docker.n8n.io/n8nio/n8n:2.19.5
     container_name: ai_social_n8n
+    user: "0:0"
     restart: unless-stopped
     ports:
       - "${N8N_PORT}:5678"
@@ -56,12 +59,14 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://localhost:${N8N_PORT}
+      - N8N_USER_FOLDER=/home/node
       - GENERIC_TIMEZONE=Asia/Ho_Chi_Minh
       - TZ=Asia/Ho_Chi_Minh
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
@@ -70,7 +75,7 @@ services:
       - ai_social_network
 
   adminer:
-    image: adminer:latest
+    image: adminer:4.8.1-standalone
     container_name: ai_social_adminer
     restart: unless-stopped
     ports:
@@ -86,6 +91,7 @@ volumes:
 
 networks:
   ai_social_network:
+    name: ai_social_network
     driver: bridge
 ```
 

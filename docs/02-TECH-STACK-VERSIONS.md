@@ -22,8 +22,8 @@ latest can change unexpectedly
 | React | `19.x` | Matches modern Next.js 16 setup |
 | TypeScript | `5.x` | Required by modern Next.js |
 | MySQL Docker image | `mysql:8.4` | Stable MySQL LTS-style line, easy local support |
-| n8n Docker image | pin after first pull, for example `n8nio/n8n:1.x.x` | Avoid workflow breakage from auto-updates |
-| Adminer | `adminer:5` or `adminer:latest` for local only | Optional browser database viewer |
+| n8n Docker image | `docker.n8n.io/n8nio/n8n:2.19.5` | Avoid workflow breakage from auto-updates |
+| Adminer | `adminer:4.8.1-standalone` | Optional browser database viewer |
 | Docker Compose | Docker Desktop built-in compose v2 | Standard local workflow |
 
 ## Node version rule
@@ -76,16 +76,16 @@ Unless the project intentionally migrates later.
 
 ## Docker image pinning rule
 
-During first setup, this is acceptable:
+During first setup, this was acceptable:
 
 ```yaml
 image: docker.n8n.io/n8nio/n8n:latest
 ```
 
-After it works, inspect version in n8n UI or container and pin it:
+The current project has already pinned n8n:
 
 ```yaml
-image: docker.n8n.io/n8nio/n8n:1.xx.x
+image: docker.n8n.io/n8nio/n8n:2.19.5
 ```
 
 For MySQL, use:

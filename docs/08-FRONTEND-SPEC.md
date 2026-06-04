@@ -139,7 +139,6 @@ Current approval behavior:
 Later milestones may add:
 
 ```text
-/app/approvals
 /app/social-accounts
 /app/calendar
 /app/settings
