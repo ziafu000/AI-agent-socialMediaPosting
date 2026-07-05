@@ -1,21 +1,19 @@
-# 16 - Current State
+﻿# 16 - Current State
 
 ## 1. Project Identity
 
 **Project name:** `AI_Automation_socialMedia`
 
-**Project type:** Local MVP for an AI Social Media Automation SaaS / service system.
+**Project type:** Local MVP for an AI Social Media Automation SaaS.
 
-**Main goal:**  
-Build a working internal/local system where a frontend can collect customer/brand/post data, send it to n8n webhooks, and store/manage the data in MySQL.
+**Main goal:**
+Build a working internal/local system where a frontend collects customer/brand/post data, sends it to n8n webhooks, stores/manages data in MySQL, and generates AI content via an OpenAI-compatible API.
 
 This project is **not a new project**. It already has source code, docs, Docker setup, MySQL schema/data, n8n workflows, and a Next.js frontend.
 
 ---
 
 ## 2. Current Architecture
-
-Current architecture:
 
 ```text
 Next.js Frontend
@@ -25,15 +23,13 @@ n8n Webhooks
 MySQL Database
 ```
 
-### Main responsibilities
-
 | Layer | Role |
 |---|---|
 | **Next.js frontend** | UI pages, forms, dashboard, customer/post/brand profile views |
-| **n8n** | Backend automation layer, webhook handlers, workflow logic |
+| **n8n** | Backend automation layer, webhook handlers, workflow logic, AI API calls |
 | **MySQL** | Stores customers, brand profiles, posts, workflow logs |
 | **Docker Compose** | Runs MySQL, n8n, and Adminer locally |
-| **DBeaver/Adminer** | Used to inspect and verify database data |
+| **DBeaver/Adminer** | Inspect and verify database data |
 
 ---
 
@@ -67,19 +63,15 @@ Safe stop command:
 docker compose down
 ```
 
-Danger command:
+Danger command (deletes all volume data):
 
 ```powershell
 docker compose down -v
 ```
 
-Do **not** run `docker compose down -v` unless MySQL and n8n backups are already verified, because `-v` removes Docker volumes and may delete local MySQL/n8n data.
-
 ---
 
 ## 4. Important Local Files
-
-These files are important and should be preserved during migration:
 
 ```text
 .env
@@ -87,14 +79,10 @@ apps/web/.env.local
 docker-compose.yml
 docker/mysql/init/001_init.sql
 n8n/workflows/local-active-workflows.json
-n8n_data_backup.tar.gz
-migration-backup/
 docs/
 ```
 
-### Sensitive files
-
-The following files must **not** be committed to public GitHub:
+Files that must not be committed:
 
 ```text
 .env
@@ -102,50 +90,34 @@ The following files must **not** be committed to public GitHub:
 apps/web/.env.local
 migration-backup/
 *.tar.gz
-n8n_data_backup.tar.gz
 *credentials*.json
 mysql*.sql
-```
-
-Recommended `.gitignore` entries:
-
-```gitignore
-.env
-.env.local
-apps/web/.env.local
-
-migration-backup/
-*.tar.gz
-n8n_data_backup.tar.gz
-*credentials*.json
-mysql*.sql
-
-node_modules/
-.next/
-dist/
-build/
-.cache/
-.turbo/
 ```
 
 ---
 
 ## 5. Environment Variables
 
-Important `.env` values include:
+Root `.env` keys:
 
 ```text
 MYSQL_ROOT_PASSWORD
 MYSQL_DATABASE
 MYSQL_USER
 MYSQL_PASSWORD
+MYSQL_PORT
 
+N8N_PORT
 N8N_BASIC_AUTH_USER
 N8N_BASIC_AUTH_PASSWORD
 N8N_ENCRYPTION_KEY
+
+NINEROUTER_API_KEY
+NINEROUTER_API_URL
+NINEROUTER_API_MODEL
 ```
 
-Important `apps/web/.env.local` values include webhook URLs such as:
+`apps/web/.env.local` keys (webhook URLs):
 
 ```text
 NEXT_PUBLIC_N8N_CREATE_CUSTOMER_WEBHOOK_URL
@@ -155,57 +127,36 @@ NEXT_PUBLIC_N8N_GENERATE_CAPTION_WEBHOOK_URL
 NEXT_PUBLIC_N8N_REWRITE_CAPTION_WEBHOOK_URL
 ```
 
-`N8N_ENCRYPTION_KEY` is critical. Keep the same key when restoring n8n data; otherwise old encrypted n8n credentials may not decrypt correctly.
+`N8N_ENCRYPTION_KEY` is critical. Keep the same key when restoring n8n data.
+
+`NINEROUTER_API_URL` must use `host.docker.internal` (not `localhost`) when the AI service runs on the host machine.
 
 ---
 
 ## 6. Database State
 
-Main database:
-
-```text
-ai_social_saas
-```
-
-Main tables:
-
-```text
-customers
-brand_profiles
-posts
-workflow_logs
-```
-
-### Table roles
+Main database: `ai_social_saas`
 
 | Table | Purpose |
 |---|---|
-| `customers` | Stores customers/client records |
+| `customers` | Stores customer/client records |
 | `brand_profiles` | Stores brand voice, audience, CTA, products/services |
-| `posts` | Stores generated/scheduled/post draft data |
+| `posts` | Stores generated/scheduled/draft post data |
 | `workflow_logs` | Stores n8n workflow activity logs |
 
-### Verify database
-
-Replace `<MYSQL_ROOT_PASSWORD>` with the real value from `.env`.
+Verify database:
 
 ```powershell
 docker exec ai_social_mysql mysql -uroot -p<MYSQL_ROOT_PASSWORD> ai_social_saas -e "SHOW TABLES; SELECT COUNT(*) AS customers FROM customers; SELECT COUNT(*) AS brand_profiles FROM brand_profiles; SELECT COUNT(*) AS posts FROM posts; SELECT COUNT(*) AS logs FROM workflow_logs;"
 ```
 
-Do not run destructive SQL such as `DROP`, `DELETE`, or mass `UPDATE` unless explicitly approved.
-
 ---
 
 ## 7. Frontend State
 
-Frontend location:
+Location: `apps/web`
 
-```text
-apps/web
-```
-
-Expected command:
+Run:
 
 ```powershell
 cd apps/web
@@ -213,19 +164,12 @@ npm install
 npm run dev
 ```
 
-Expected frontend URL:
+URL: `http://localhost:3000`
+
+Pages:
 
 ```text
-http://localhost:3000
-```
-
-If port `3000` is occupied, Next.js may use `3001`.
-
-### Important pages
-
-```text
-/
- /dashboard
+/dashboard
 /customers
 /customers/[id]
 /brand-profile
@@ -241,79 +185,58 @@ If port `3000` is occupied, Next.js may use `3001`.
 /approvals
 ```
 
-Do not delete or rename these pages unless explicitly requested.
-
 ---
 
 ## 8. n8n State
 
-n8n runs as the backend automation layer.
+Container: `ai_social_n8n`
+URL: `http://localhost:5678`
 
-Expected n8n container:
-
-```text
-ai_social_n8n
-```
-
-Expected n8n URL:
+Active workflows (18 total):
 
 ```text
-http://localhost:5678
+Create Customer, Save Brand Profile, Create Post
+List Customers, Get Customer Detail
+List Brand Profiles, Update Brand Profile
+List Posts, Update Post
+List Scheduled Posts, List Workflow Logs
+Run Schedule Simulation, Dashboard Summary
+Generate Content Ideas, Generate Caption, Rewrite Caption
+Schedule Post, Review Post
 ```
 
-Expected workflows:
+Workflow backup: `n8n/workflows/local-active-workflows.json`
+
+### AI Code nodes
+
+All 3 AI workflows use `this.helpers.httpRequest()` inside a Code node to call 9router.
+
+Required docker-compose setting to allow env var access in Code nodes:
+
+```yaml
+- N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+```
+
+Env vars used inside Code nodes:
 
 ```text
-Create Customer
-Save Brand Profile
-Create Post
-List Workflow Logs
-List Scheduled Posts
-List Posts
-Update Post
-List Customers
-Get Customer Detail
-List Brand Profiles
-Update Brand Profile
-Run Schedule Simulation
-Dashboard Summary
-Generate Content Ideas
-Generate Caption
-Rewrite Caption
-Schedule Post
-Review Post
+.NINEROUTER_API_KEY
+.NINEROUTER_API_URL
+.NINEROUTER_API_MODEL
 ```
 
-Important workflow backup files:
-
-```text
-n8n/workflows/local-active-workflows.json
-n8n_data_backup.tar.gz
-migration-backup/n8n/
-```
-
-### n8n MySQL credential rule
-
-Inside Docker, n8n must connect to MySQL using:
+### MySQL credential inside n8n
 
 ```text
 Host: mysql
 Port: 3306
 ```
 
-Do **not** use:
-
-```text
-Host: localhost
-```
-
-because `localhost` inside n8n points to the n8n container itself, not the MySQL container.
+Do not use `localhost` inside n8n for MySQL.
 
 ---
 
-## 9. Important Webhooks
-
-Expected production webhook paths:
+## 9. Webhook Paths
 
 ```text
 /webhook/create-customer
@@ -336,216 +259,44 @@ Expected production webhook paths:
 /webhook/review-post
 ```
 
-Use production webhook URLs:
+Use production webhook URLs: `http://localhost:5678/webhook/{path}`
 
-```text
-http://localhost:5678/webhook/{path}
-```
-
-Do not use `/webhook-test/{path}` for normal app runtime.
+Do not use `/webhook-test/` for normal app runtime.
 
 ---
 
-## 10. Webhook Verification Commands
+## 10. Quick Verify Commands
 
-Test customers:
+Check containers:
+
+```powershell
+docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"
+```
+
+Test webhook:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/list-customers" -ContentType "application/json" -Body "{}"
 ```
 
-Test dashboard:
+Test AI:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/dashboard-summary" -ContentType "application/json" -Body "{}"
-```
-
-Test generate caption:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/generate-caption" -ContentType "application/json" -Body '{"customer_id":1,"brand_profile_id":1,"brand_name":"Demo Spa","platform":"facebook","topic":"Acne treatment benefits","content_pillar":"education","goal":"build_trust"}'
-```
-
-Test rewrite caption:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/rewrite-caption" -ContentType "application/json" -Body '{"customer_id":1,"brand_profile_id":1,"brand_name":"Demo Spa","platform":"facebook","topic":"Acne treatment benefits","content_pillar":"education","goal":"build_trust","current_caption":"Existing caption text","current_hashtags":"#facebook #education","rewrite_style":"shorter"}'
+Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/generate-caption" -ContentType "application/json" -Body '{"customer_id":1,"brand_profile_id":1,"brand_name":"Demo","platform":"facebook","topic":"Test","content_pillar":"education","goal":"build_trust"}'
 ```
 
 ---
 
-## 11. Current Migration Status
-
-The project was restored after moving to a new SSD.
-
-Known restore process:
-
-1. Install Git, Node.js, Docker Desktop, VS Code, and DBeaver.
-2. Restore or clone project into:
-
-```text
-D:\Billy\Coding\Project\AI_Automation_socialMedia
-```
-
-3. Restore:
-
-```text
-.env
-apps/web/.env.local
-```
-
-4. Run:
-
-```powershell
-docker compose up -d
-```
-
-5. Restore MySQL dump into `ai_social_saas`.
-6. Restore n8n data from:
-
-```text
-n8n_data_backup.tar.gz
-```
-
-7. Restart n8n.
-8. Publish/activate workflows if needed.
-9. Run frontend:
-
-```powershell
-cd apps/web
-npm install
-npm run dev
-```
-
----
-
-## 12. Known Issues From Migration
-
-### 12.1 PowerShell blocks npm
-
-Symptom:
-
-```text
-npm.ps1 cannot be loaded because running scripts is disabled on this system
-```
-
-Fix:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-```
-
-Or temporary workaround:
-
-```powershell
-npm.cmd install
-npm.cmd run dev
-```
-
-### 12.2 MySQL dump encoding issue
-
-Symptom:
-
-```text
-ERROR: ASCII '\0' appeared in the statement
-```
-
-Cause: SQL dump file may be UTF-16.
-
-Fix: convert dump to UTF-8 before restoring.
-
-```powershell
-$src = "E:\AI_AUTOMATION_MIGRATION_BACKUP\mysql-ai-social-saas.sql"
-$dst = "E:\AI_AUTOMATION_MIGRATION_BACKUP\mysql-ai-social-saas-utf8.sql"
-
-$content = [System.IO.File]::ReadAllText($src, [System.Text.Encoding]::Unicode)
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($dst, $content, $utf8NoBom)
-```
-
-Then restore UTF-8 file.
-
-### 12.3 n8n `update:workflow --all` deprecation
-
-Newer n8n versions may show:
-
-```text
-Workflow publishing via "update:workflow --all" is no longer supported.
-Please publish workflows individually using: publish:workflow --id=<workflow-id>
-```
-
-If webhook returns `404`, check whether workflows are published/active in the n8n UI or publish workflows individually.
-
-### 12.4 Docker cannot mount external drive path
-
-If Docker cannot see files from `E:\`, copy the backup file into the project folder first, then mount the project folder.
-
-Example:
-
-```powershell
-Copy-Item "E:\AI_AUTOMATION_MIGRATION_BACKUP\n8n\n8n_data_backup.tar.gz" "D:\Billy\Coding\Project\AI_Automation_socialMedia\n8n_data_backup.tar.gz" -Force
-```
-
----
-
-## 13. n8n Restore Command
-
-After copying `n8n_data_backup.tar.gz` into the project root:
-
-```powershell
-cd "D:\Billy\Coding\Project\AI_Automation_socialMedia"
-
-docker compose down
-
-docker run --rm -v "ai_automation_socialmedia_n8n_data:/data" -v "D:\Billy\Coding\Project\AI_Automation_socialMedia:/backup" alpine sh -c "rm -rf /data/* /data/.[!.]* /data/..?* 2>/dev/null || true; tar xzf /backup/n8n_data_backup.tar.gz -C /data; find /data -maxdepth 2 -type f | head -30"
-
-docker compose up -d
-```
-
-If the n8n volume name is different, check it with:
-
-```powershell
-docker volume ls | findstr n8n
-```
-
-Then replace `ai_automation_socialmedia_n8n_data` with the real volume name.
-
----
-
-## 14. MySQL Restore Command
-
-Copy dump into container:
-
-```powershell
-docker cp "E:\AI_AUTOMATION_MIGRATION_BACKUP\mysql-ai-social-saas-utf8.sql" ai_social_mysql:/tmp/mysql-ai-social-saas-utf8.sql
-```
-
-Restore:
-
-```powershell
-docker exec ai_social_mysql mysql -uroot -p<MYSQL_ROOT_PASSWORD> --default-character-set=utf8mb4 ai_social_saas -e "source /tmp/mysql-ai-social-saas-utf8.sql"
-```
-
-Alternative restore from host file:
-
-```powershell
-cmd /c "docker exec -i -e MYSQL_PWD=<MYSQL_ROOT_PASSWORD> ai_social_mysql mysql --default-character-set=utf8mb4 -u root ai_social_saas < E:\AI_AUTOMATION_MIGRATION_BACKUP\mysql-ai-social-saas-utf8.sql"
-```
-
----
-
-## 15. Current Development Rules
-
-This project must be continued carefully.
+## 11. Current Development Rules
 
 Do not:
 
 ```text
 - Treat as a new project
 - Rewrite the whole project
-- Delete existing feature/page/workflow/schema/docs
+- Delete existing features/pages/workflows/schema/docs
 - Change architecture without approval
-- Add auth/payment/OpenAI/social posting unless explicitly requested
+- Add auth/payment/real social posting unless explicitly requested
 - Drop database/table
 - Remove env keys
 - Commit secrets
@@ -565,72 +316,20 @@ Do:
 
 ---
 
-## 16. Current Recommended Next Steps
+## 12. Completed Milestones
 
-Before building new features:
+- Phase 0 local skeleton
+- Phase 1 brand profile management
+- Phase 2 post draft management
+- Phase 3 AI content generation (9router, OpenAI-compatible)
+- Phase 4 scheduling simulation
+- Phase 4.5 approval workflow
+- Dashboard summary and polish
+- Validation and error handling
+- Data consistency cleanup
+- Workflow logs
+- Laptop migration
 
-1. Verify Docker containers:
+## Next Recommended Step
 
-```powershell
-docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"
-```
-
-2. Verify MySQL data:
-
-```powershell
-docker exec ai_social_mysql mysql -uroot -p<MYSQL_ROOT_PASSWORD> ai_social_saas -e "SHOW TABLES; SELECT COUNT(*) AS customers FROM customers; SELECT COUNT(*) AS posts FROM posts; SELECT COUNT(*) AS logs FROM workflow_logs;"
-```
-
-3. Verify n8n webhooks:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/list-customers" -ContentType "application/json" -Body "{}"
-```
-
-4. Verify frontend:
-
-```powershell
-cd apps/web
-npm install
-npm run dev
-```
-
-5. Open:
-
-```text
-http://localhost:3000
-```
-
-6. Test pages:
-
-```text
-/dashboard
-/customers
-/brand-profiles
-/posts/list
-/content-planner
-/workflow-logs
-/scheduled-posts
-/approvals
-```
-
----
-
-## 17. Role of Codex Going Forward
-
-Codex should be treated as a careful project continuation assistant.
-
-Codex must:
-
-```text
-1. Read README.md and docs/ before working
-2. Treat current source code as source of truth
-3. Avoid large refactors
-4. Avoid deleting existing features
-5. Work by small milestones
-6. Report files inspected and changed
-7. Provide commands and verification steps
-8. Stop after task completion
-```
-
-If Codex is uncertain, it should ask instead of guessing deeply.
+Phase 5 - Real social posting.

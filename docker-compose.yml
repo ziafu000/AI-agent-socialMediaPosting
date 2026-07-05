@@ -37,20 +37,12 @@ services:
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - NINEROUTER_API_KEY=${NINEROUTER_API_KEY}
+      - NINEROUTER_API_URL=${NINEROUTER_API_URL}
+      - NINEROUTER_API_MODEL=${NINEROUTER_API_MODEL}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:
       - n8n_data:/home/node/.n8n
-    depends_on:
-      - mysql
-    networks:
-      - ai_social_network
-
-  adminer:
-    image: adminer:4.8.1-standalone
-    container_name: ai_social_adminer
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
     depends_on:
       - mysql
     networks:

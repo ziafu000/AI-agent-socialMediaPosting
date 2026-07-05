@@ -1,10 +1,10 @@
-# 05 — Docker Setup
+﻿# 05 - Docker Setup
 
 ## Goal
 
 Run local infrastructure with one command:
 
-```bash
+```powershell
 docker compose up -d
 ```
 
@@ -16,15 +16,7 @@ docker compose up -d
 | n8n | `ai_social_n8n` | `5678` | Automation backend |
 | Adminer | `ai_social_adminer` | `8080` | Optional DB viewer |
 
-## `docker-compose.yml`
-
-File path:
-
-```text
-docker-compose.yml
-```
-
-Content:
+## Current docker-compose.yml
 
 ```yaml
 services:
@@ -66,7 +58,10 @@ services:
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - NINEROUTER_API_KEY=${NINEROUTER_API_KEY}
+      - NINEROUTER_API_URL=${NINEROUTER_API_URL}
+      - NINEROUTER_API_MODEL=${NINEROUTER_API_MODEL}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
@@ -95,19 +90,31 @@ networks:
     driver: bridge
 ```
 
-## First run
+## Key env var notes
 
-```bash
-cp .env.example .env
-# edit .env values
+```text
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+```
 
+Required to allow n8n Code nodes to read environment variables via $env.VAR_NAME.
+Without this, n8n sandbox blocks all env access.
+
+```text
+NINEROUTER_API_URL must use host.docker.internal instead of localhost
+```
+
+Because inside Docker, localhost points to the container itself, not the host machine.
+
+## Start stack
+
+```powershell
 docker compose up -d
 ```
 
 ## Check containers
 
-```bash
-docker ps
+```powershell
+docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"
 ```
 
 Expected containers:
@@ -127,19 +134,19 @@ Adminer:  http://localhost:8080
 MySQL:    localhost:3306
 ```
 
-## Stop services
+## Stop safely
 
-```bash
+```powershell
 docker compose down
 ```
 
-## Reset database completely
+## Reset database (danger)
 
-Warning: this deletes local MySQL data.
+Warning: this deletes all local MySQL and n8n volume data.
 
-```bash
+```powershell
 docker compose down -v
 docker compose up -d
 ```
 
-Use this when SQL init changes and you want MySQL to rerun `docker/mysql/init/001_init.sql`.
+Only run this if MySQL init needs to rerun and you have verified backups.

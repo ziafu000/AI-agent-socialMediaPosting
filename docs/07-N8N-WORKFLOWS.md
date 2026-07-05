@@ -1,177 +1,146 @@
-# 07 — n8n Workflows
+﻿# 07 - n8n Workflows
 
-## Current workflow scope
+## Active workflows
 
-Active local workflows now include:
+| Workflow | Webhook path |
+|---|---|
+| Create Customer | `/webhook/create-customer` |
+| Save Brand Profile | `/webhook/save-brand-profile` |
+| Create Post | `/webhook/create-post` |
+| Update Brand Profile | `/webhook/update-brand-profile` |
+| Update Post | `/webhook/update-post` |
+| List Customers | `/webhook/list-customers` |
+| Get Customer Detail | `/webhook/get-customer-detail` |
+| List Brand Profiles | `/webhook/list-brand-profiles` |
+| List Posts | `/webhook/list-posts` |
+| List Scheduled Posts | `/webhook/list-scheduled-posts` |
+| List Workflow Logs | `/webhook/list-workflow-logs` |
+| Run Schedule Simulation | `/webhook/run-schedule-simulation` |
+| Dashboard Summary | `/webhook/dashboard-summary` |
+| Generate Content Ideas | `/webhook/generate-content-ideas` |
+| Generate Caption | `/webhook/generate-caption` |
+| Rewrite Caption | `/webhook/rewrite-caption` |
+| Schedule Post | `/webhook/schedule-post` |
+| Review Post | `/webhook/review-post` |
 
-- `Create Customer`
-- `Save Brand Profile`
-- `Create Post`
-- `Update Brand Profile`
-- `Update Post`
-- `List Customers`
-- `Get Customer Detail`
-- `List Brand Profiles`
-- `List Posts`
-- `List Scheduled Posts`
-- `List Workflow Logs`
-- `Run Schedule Simulation`
-- `Dashboard Summary`
-- `Generate Content Ideas`
-- `Generate Caption`
-- `Rewrite Caption`
-- `Schedule Post`
-- `Review Post`
-
-Additional importable workflows are tracked in:
-
-- `n8n/workflows/generate-content-ideas-stub-workflow.json`
-- `n8n/workflows/generate-caption-stub-workflow.json`
-- `n8n/workflows/rewrite-caption-stub-workflow.json`
-- `n8n/workflows/schedule-post-workflow.json`
-- `n8n/workflows/review-post-workflow.json`
-
-The exported local workflow state is tracked in:
+The exported workflow state is tracked in:
 
 ```text
 n8n/workflows/local-active-workflows.json
 ```
 
-The validation-patched export is generated into:
+## Standard workflow pattern
 
 ```text
-n8n/workflows/local-active-workflows.validation.json
+Webhook -> Validate Input -> Is Valid -> [Logic] -> Respond to Webhook
+                                      -> Respond Validation Error (400)
 ```
 
-## Workflow diagram
+## AI workflows
+
+All 3 AI workflows call an OpenAI-compatible endpoint via `this.helpers.httpRequest()` inside a Code node.
+
+Env vars used inside Code nodes:
 
 ```text
-Webhook Trigger
-  ↓
-MySQL Execute Query
-  ↓
-Respond to Webhook
+.NINEROUTER_API_KEY
+.NINEROUTER_API_URL
+.NINEROUTER_API_MODEL
 ```
 
-## Node 1 — Webhook
+These are readable because `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` is set in docker-compose.yml.
 
-Node type:
+### Generate Content Ideas
 
 ```text
-Webhook
+POST /webhook/generate-content-ideas
 ```
 
-Settings:
+Flow:
 
 ```text
-HTTP Method: POST
-Path: create-customer
-Response mode: Respond to Webhook node
+Webhook -> Validate Input -> Call 9Router Ideas -> Respond to Webhook
+                          -> Respond Validation Error
 ```
 
-Test URL:
+Disconnected fallback stub node `Generate Stub Ideas` is kept inside the workflow but not connected.
+
+### Generate Caption
 
 ```text
-http://localhost:5678/webhook-test/create-customer
+POST /webhook/generate-caption
 ```
 
-Production/local active URL:
+Flow:
 
 ```text
-http://localhost:5678/webhook/create-customer
+Webhook -> Validate Input -> Call 9Router Caption -> Respond to Webhook
+                          -> Respond Validation Error
 ```
 
-## Expected request body
+Disconnected fallback stub node `Generate Stub Caption` is kept inside the workflow but not connected.
 
-```json
-{
-  "name": "Demo Customer",
-  "email": "demo@example.com",
-  "company_name": "Demo Spa",
-  "industry": "Beauty & Spa"
-}
-```
-
-## Node 2 — MySQL credential
-
-Credential type:
+### Rewrite Caption
 
 ```text
-MySQL
+POST /webhook/rewrite-caption
 ```
 
-Inside n8n Docker container, use:
+Flow:
 
 ```text
-Host: mysql
-Port: 3306
-Database: ai_social_saas
-User: ai_social_user
-Password: ai_social_password
+Webhook -> Validate Input -> Call 9Router Rewrite -> Respond to Webhook
+                          -> Respond Validation Error
 ```
 
-Important:
+Disconnected fallback stub node `Rewrite Stub Caption` is kept inside the workflow but not connected.
+
+## Schedule Post workflow
 
 ```text
-Do not use localhost as MySQL host inside n8n.
+POST /webhook/schedule-post
 ```
 
-## Node 2 — MySQL query
-
-Node type:
+Flow:
 
 ```text
-MySQL
+Webhook -> Validate Input -> Find Post -> Post Found -> Update Schedule -> Log Schedule -> Respond to Webhook
+                          -> Respond Validation Error
+                                                     -> Respond Post Not Found (404)
 ```
 
-Operation:
+Updates post to `status = scheduled`, stores `scheduled_at`, writes workflow log row.
+
+## Review Post workflow
 
 ```text
-Execute Query
+POST /webhook/review-post
 ```
 
-Query:
+Flow:
 
-```sql
-INSERT INTO customers (name, email, company_name, industry)
-VALUES (
-  '{{ $json.body.name }}',
-  '{{ $json.body.email }}',
-  '{{ $json.body.company_name }}',
-  '{{ $json.body.industry }}'
-)
-ON DUPLICATE KEY UPDATE
-  name = VALUES(name),
-  company_name = VALUES(company_name),
-  industry = VALUES(industry);
+```text
+Webhook -> Validate Input -> Find Post -> Validate Transition -> Transition Valid -> Update Review Status -> Log Review -> Respond to Webhook
+                          -> Respond Validation Error
+                                       -> Respond Post Not Found (404)
+                                                               -> Respond Transition Error (400)
 ```
 
-## Node 3 — Respond to Webhook
+Supported actions:
 
-Response body:
-
-```json
-{
-  "success": true,
-  "message": "Customer saved successfully"
-}
+```text
+approve : needs_review -> approved
+reject  : needs_review -> cancelled
+cancel  : draft/needs_review/approved/scheduled -> cancelled
 ```
+
+Writes workflow log rows with event types: `approve_post`, `reject_post`, `cancel_post`.
 
 ## Validation and error handling
 
-Validation is now active on the main input workflows:
+Validation is active on all input workflows. Invalid input returns HTTP 400.
 
-- `Create Customer`
-- `Save Brand Profile`
-- `Create Post`
-- `Update Brand Profile`
-- `Update Post`
-- `Get Customer Detail`
-
-Current behavior:
-
-- invalid input returns HTTP `400`
-- response shape is standardized:
+Standard error response shape:
 
 ```json
 {
@@ -181,122 +150,39 @@ Current behavior:
 }
 ```
 
-- import/export patch helper:
+## Importing and activating workflows
 
-```text
-node scripts/patch-n8n-validation.mjs n8n/workflows/local-active-workflows.json n8n/workflows/local-active-workflows.validation.json
+```powershell
+docker cp "path\to\local-active-workflows.json" ai_social_n8n:/tmp/workflows.json
+docker exec ai_social_n8n n8n import:workflow --input=/tmp/workflows.json
 ```
 
-- after importing workflows, reactivate all and restart n8n:
+After import, publish each workflow individually (n8n v2.x deprecates --all):
 
-```text
-docker exec ai_social_n8n n8n update:workflow --all --active=true
+```powershell
+docker exec ai_social_n8n n8n publish:workflow --id=<workflow-id>
+```
+
+Then restart n8n:
+
+```powershell
 docker restart ai_social_n8n
 ```
 
-## Data consistency behavior
+## MySQL credential inside n8n
 
-Current consistency rules:
-
-- `Save Brand Profile` updates the latest existing row when `customer_id + brand_name` already exists
-- `Create Post` avoids inserting another row for the same exact draft payload
-- `Update Brand Profile` returns `404` if the target row does not exist
-- `Update Post` returns `404` if the target row does not exist
-
-Historical junk rows are not auto-deleted by the workflow patch.
-
-Use this report before manual cleanup:
+Inside Docker, n8n must connect to MySQL using:
 
 ```text
-npm run data:consistency:report
+Host: mysql
+Port: 3306
 ```
 
-## AI and scheduling workflows
+Do not use `localhost` as MySQL host inside n8n containers.
 
-### Generate Content Ideas
+## Data consistency rules
 
-```text
-POST /webhook/generate-content-ideas
-```
-
-The current implementation path is:
-
-```text
-Webhook -> Validate Input -> Call DeepSeek Ideas -> Respond to Webhook
-```
-
-The old `Generate Stub Ideas` node is still kept inside the workflow as a
-disconnected fallback node.
-
-### Generate Caption
-
-```text
-POST /webhook/generate-caption
-```
-
-The current implementation path is:
-
-```text
-Webhook -> Validate Input -> Call DeepSeek Caption -> Respond to Webhook
-```
-
-The old `Generate Stub Caption` node is still kept inside the workflow as a
-disconnected fallback node.
-
-### Rewrite Caption
-
-```text
-POST /webhook/rewrite-caption
-```
-
-The current implementation path is:
-
-```text
-Webhook -> Validate Input -> Call DeepSeek Rewrite -> Respond to Webhook
-```
-
-The old `Rewrite Stub Caption` node is still kept inside the workflow as a
-disconnected fallback node.
-
-### Schedule Post
-
-```text
-POST /webhook/schedule-post
-```
-
-The current implementation path is:
-
-```text
-Webhook -> Validate Input -> Find Post -> Update Schedule -> Log Schedule -> Respond to Webhook
-```
-
-It updates an existing post to `status = scheduled`, stores `scheduled_at`, and
-writes a workflow log row with `event_type = schedule_post`.
-
-### Review Post
-
-```text
-POST /webhook/review-post
-```
-
-The current implementation path is:
-
-```text
-Webhook -> Validate Input -> Find Post -> Validate Transition -> Update Review Status -> Log Review -> Respond to Webhook
-```
-
-Supported actions:
-
-```text
-approve: needs_review -> approved
-reject: needs_review -> cancelled
-cancel: draft/needs_review/approved/scheduled -> cancelled
-```
-
-It writes workflow log rows with event types:
-
-```text
-approve_post
-reject_post
-cancel_post
-```
+- Save Brand Profile: upserts on `customer_id + brand_name`
+- Create Post: duplicate-safe on identical payload
+- Update Brand Profile: returns 404 if row not found
+- Update Post: returns 404 if row not found

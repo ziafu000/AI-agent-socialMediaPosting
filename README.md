@@ -1,8 +1,6 @@
-# AI Social SaaS — Markdown Planning Pack
+﻿# AI Social SaaS - Markdown Planning Pack
 
-This folder contains the planning and technical specification documents for the first local skeleton of the AI social media automation SaaS.
-
-The goal is to give an AI coding assistant enough context to help build the project consistently.
+This folder contains the planning and technical specification documents for the AI social media automation SaaS local MVP.
 
 ## Recommended reading order
 
@@ -22,84 +20,53 @@ The goal is to give an AI coding assistant enough context to help build the proj
 14. `docs/13-TROUBLESHOOTING.md`
 15. `docs/14-AI-PROMPTS.md`
 16. `docs/15-LAPTOP-MIGRATION.md`
+17. `docs/16-CURRENT-STATE.md`
 
-## Project goal
+## Architecture
 
-Build a local development skeleton with:
+```text
+Next.js Frontend -> n8n Webhooks -> MySQL Database
+```
 
-- GitHub repository
-- Docker Compose
-- n8n local on Docker
-- MySQL database on Docker
-- DBeaver database management
-- Basic Next.js frontend
-- Frontend calls n8n webhook
-- n8n writes customer data into MySQL
+Docker containers:
+
+```text
+ai_social_mysql   (port 3306)
+ai_social_n8n     (port 5678)
+ai_social_adminer (port 8080)
+```
+
+Frontend: `http://localhost:3000`
+
+## Completed milestones
+
+- Phase 0 local skeleton
+- Phase 1 brand profile management
+- Phase 2 post draft management
+- Phase 3 AI content generation (via 9router, OpenAI-compatible)
+- Phase 4 scheduling simulation
+- Phase 4.5 approval workflow
+- Dashboard, workflow logs, validation, data consistency
+
+## Current AI status
+
+AI generation (Generate Content Ideas, Generate Caption, Rewrite Caption) is wired to 9router via `this.helpers.httpRequest()` in n8n Code nodes.
+
+Env vars used: `NINEROUTER_API_KEY`, `NINEROUTER_API_URL`, `NINEROUTER_API_MODEL`
+
+Required n8n setting: `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`
+
+## Next milestone
+
+Phase 5 - Real social posting.
 
 ## First success condition
 
-The MVP skeleton is successful when:
-
 ```text
 Frontend form submit
-→ n8n webhook receives request
-→ n8n inserts customer into MySQL
-→ DBeaver shows the inserted customer
+-> n8n webhook receives request
+-> n8n inserts customer into MySQL
+-> DBeaver shows the inserted customer
 ```
 
-## Current local status
-
-Implemented:
-
-- Phase 0 local skeleton
-- Brand profile management
-- Post draft management
-- Content planning without AI
-- AI content generation via temporary DeepSeek model nodes
-- Generate caption stub
-- Rewrite caption stub
-- Scheduling simulation
-- Dedicated schedule post workflow
-- Approval workflow
-- Workflow logs
-- Customers list and detail
-- Dashboard summary
-- Dashboard polish
-- Validation and error handling
-- Data consistency cleanup
-
-Validation and error handling currently includes:
-
-- frontend payload validation before calling n8n
-- standardized error shape: `{ success: false, message, error }`
-- n8n validation gates on create and update workflows
-- exported local n8n workflows tracked in `n8n/workflows/`
-
-Data consistency cleanup currently includes:
-
-- duplicate-safe save behavior for brand profiles
-- duplicate-safe create behavior for identical post drafts
-- not-found error response on update workflows
-- local audit script: `npm run data:consistency:report`
-
-Current AI generation status:
-
-- `generate-content-ideas` started as a deterministic n8n stub workflow
-- `generate-caption` started as a deterministic n8n stub workflow
-- `rewrite-caption` started as a deterministic n8n stub workflow
-- these workflows are now wired to temporary DeepSeek model nodes
-- the old stub nodes are still kept inside n8n as disconnected fallback nodes
-- future production AI can replace only the connected model node while keeping the webhook contract stable
-
-Current scheduling status:
-
-- posts can be scheduled from the edit post page
-- `schedule-post` is implemented as a dedicated n8n workflow
-- scheduled posts can be listed and simulated as published
-
-Current approval status:
-
-- posts with `needs_review` can be approved or rejected from `/approvals`
-- draft, needs review, approved, and scheduled posts can be cancelled from `/approvals`
-- `review-post` is implemented as a dedicated n8n workflow export
-- approval decisions write workflow log rows
+Already achieved.

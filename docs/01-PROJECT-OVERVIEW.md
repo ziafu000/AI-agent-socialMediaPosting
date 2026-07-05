@@ -1,4 +1,4 @@
-# 01 — Project Overview
+﻿# 01 - Project Overview
 
 ## Product idea
 
@@ -24,9 +24,9 @@ Current local scope includes:
 - Brand profile create/list/update
 - Post draft create/list/update
 - Content planning without AI
-- AI model content idea generation through n8n
-- AI model caption generation through n8n
-- AI model caption rewrite through n8n
+- AI content idea generation via 9router (OpenAI-compatible)
+- AI caption generation via 9router
+- AI caption rewrite via 9router
 - Dedicated post scheduling workflow
 - Approval workflow for review decisions
 - Scheduled post list
@@ -35,8 +35,7 @@ Current local scope includes:
 - Workflow logs
 - Frontend and n8n validation/error handling
 
-It is still not the full SaaS. Final production AI setup, real social publishing,
-authentication, workspaces, and billing are future milestones.
+It is still not the full SaaS. Real social publishing, authentication, workspaces, and billing are future milestones.
 
 ## Local skeleton architecture
 
@@ -49,12 +48,12 @@ n8n webhook
   ↓ SQL insert
 MySQL database
   ↑
-DBeaver database client
+DBeaver / Adminer database client
 ```
 
 ## Why n8n is used
 
-n8n is the first automation backend layer.
+n8n is the backend automation layer.
 
 It currently handles:
 
@@ -63,13 +62,12 @@ It currently handles:
 - Database insert/update
 - Workflow logging
 - Schedule simulation
-- Temporary DeepSeek-backed AI generation
+- AI generation via 9router API (OpenAI-compatible endpoint)
 - Dedicated post scheduling
 - Approval decisions
 
 Later, it may handle:
 
-- Final production AI model calls
 - Real scheduled publishing workflows
 - Social posting workflows
 
@@ -89,20 +87,7 @@ Docker gives a repeatable local environment.
 
 Instead of installing MySQL and n8n directly on the machine, Docker runs them as containers.
 
-## First MVP workflow
-
-```text
-User opens frontend at localhost:3000
-User fills customer form
-User clicks submit
-Frontend sends POST request to n8n webhook
-n8n inserts customer into MySQL
-User opens DBeaver and sees new customer row
-```
-
 ## First database entities
-
-Start with these tables:
 
 - `customers`
 - `brand_profiles`
