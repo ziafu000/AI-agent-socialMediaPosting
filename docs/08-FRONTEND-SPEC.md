@@ -1,146 +1,129 @@
-# 08 — Frontend Specification
+﻿# 08 - Frontend Specification
 
-## Framework
+This document separates the current local frontend from the target production frontend.
 
-Use Next.js with:
+## Current Frontend
 
-- App Router
+**Location:** `apps/web`
+
+**Stack:**
+- Next.js 16 App Router
+- React 19
 - TypeScript
 - Tailwind CSS
+- shadcn-style UI components
 
-## First frontend page
-
-File path:
-
-```text
-apps/web/src/app/page.tsx
-```
-
-Purpose:
-
-Display a basic form to create a customer.
-
-## Form fields
-
-| Field | Type | Required |
-|---|---|---|
-| `name` | text | yes |
-| `email` | email | yes |
-| `company_name` | text | no |
-| `industry` | text | no |
-
-## Frontend environment variable
-
-```env
-NEXT_PUBLIC_N8N_CREATE_CUSTOMER_WEBHOOK_URL=http://localhost:5678/webhook-test/create-customer
-```
-
-## Request from frontend to n8n
-
-Method:
+**Current request flow:**
 
 ```text
-POST
+Browser -> apps/web/src/lib/n8n-client.ts -> n8n webhook -> MySQL
 ```
 
-Headers:
+The frontend currently calls n8n webhook URLs directly from the browser through `apps/web/src/lib/n8n-client.ts`.
 
-```json
-{
-  "Content-Type": "application/json"
-}
-```
+## Current Routes
 
-Body:
+Main implemented app routes:
+- `/` - dashboard overview
+- `/customers` - customer management
+- `/brand-profiles` - brand profile management
+- `/posts` - post list and post management
+- `/post-creator` - AI-assisted post creation
+- `/test` - integration/test UI
 
-```json
-{
-  "name": "Demo Customer",
-  "email": "demo@example.com",
-  "company_name": "Demo Spa",
-  "industry": "Beauty & Spa"
-}
-```
+## Current Capabilities
 
-## Expected success response
+Implemented local MVP capabilities:
+- Customer CRUD through n8n webhooks
+- Brand profile management
+- Post creation and update
+- AI post generation through n8n workflow
+- Scheduling/review workflow UI
+- Basic dashboard and management screens
 
-```json
-{
-  "success": true,
-  "message": "Customer saved successfully"
-}
-```
+## Current Limitations
 
-## Basic UI layout
+The frontend is not production-secure yet:
+- No authentication provider is wired into the app.
+- No protected route middleware exists yet.
+- No tenant/user context is enforced in frontend requests.
+- Browser code calls n8n webhooks directly.
+- `NEXT_PUBLIC_N8N_*` variables expose webhook base URLs to the browser.
+- There is no server-side API layer for protected operations yet.
 
-Use a clean centered card.
+## Target Phase 5A Frontend
+
+Phase 5A should introduce the security boundary required before production deployment.
+
+Target request flow:
 
 ```text
-Page background: light gray
-Card: white, rounded, shadow
-Title: AI Social SaaS
-Subtitle: Demo frontend gửi thông tin khách hàng sang n8n
-Inputs: full width
-Button: full width
-Result: code block
+Browser -> Next.js server route -> protected n8n webhook -> MySQL
 ```
 
-## UX states
+Target behavior:
+- Add Clerk authentication.
+- Add sign-in/sign-up routes.
+- Protect application routes with middleware.
+- Move protected workflow calls behind Next.js server routes.
+- Derive `user_id` from server-side auth, not from client payloads.
+- Forward internal auth from Next.js server routes to n8n.
+- Stop trusting browser-provided tenant identifiers.
 
-The page must handle:
+## Target Environment Variables
 
-- Empty form
-- Loading state
-- Success response
-- Error response
+Current local variables may include browser-visible n8n webhook URLs.
 
-## Current pages
+For Phase 5A, split variables by trust boundary:
 
-The frontend now includes:
+Browser-safe:
+- Clerk publishable key
+- Public app URLs if needed
+
+Server-only:
+- Clerk secret key
+- Internal n8n base URL
+- Internal n8n auth secret/API key
+- Database/admin credentials if ever needed by server code
+
+Do not expose internal n8n secrets through `NEXT_PUBLIC_*` variables.
+
+## Target API Pattern
+
+Recommended protected pattern:
 
 ```text
-/app/customers
-/app/brand-profile
-/app/brand-profiles
-/app/brand-profiles/[id]
-/app/posts
-/app/posts/list
-/app/posts/[id]
-/app/scheduled-posts
-/app/schedule-simulator
-/app/content-planner
-/app/workflow-logs
-/app/dashboard
-/app/approvals
+Client component/page
+  -> fetch('/api/...')
+  -> Next.js route verifies Clerk session
+  -> route attaches trusted user_id and internal auth
+  -> n8n validates internal auth
+  -> n8n queries by user_id
 ```
 
-Current content planner behavior:
+Example endpoint direction:
+- Frontend calls `/api/customers` instead of direct n8n customer webhook.
+- Frontend calls `/api/posts` instead of direct n8n post webhook.
+- Frontend calls `/api/ai/generate-post` instead of direct AI workflow webhook.
 
-- manual planner mode creates deterministic ideas in the browser
-- AI mode calls `generate-content-ideas`
-- individual ideas can call `generate-caption`
-- individual generated captions can call `rewrite-caption`
+## Migration Notes
 
-Current scheduling behavior:
+Do not change frontend payloads to require `user_id` until the database and n8n workflows are updated together.
 
-- post edit page can update post content/status
-- post edit page can call the dedicated `schedule-post` workflow
-- scheduled posts list shows posts with `status = scheduled`
+Safe migration order:
+1. Add auth provider and protected routes.
+2. Add server API layer while preserving existing local behavior where possible.
+3. Add database `user_id` columns and indexes.
+4. Update n8n workflows to require trusted `user_id`.
+5. Move frontend calls from direct n8n URLs to server routes.
+6. Verify one user cannot access another user's data.
 
-Current approval behavior:
+## Frontend Verification Checklist
 
-- `/approvals` lists review-related posts
-- posts with `needs_review` can be approved or rejected
-- draft, needs review, approved, and scheduled posts can be cancelled
-- approval actions call the dedicated `review-post` workflow
-
-## Future pages
-
-Later milestones may add:
-
-```text
-/app/social-accounts
-/app/calendar
-/app/settings
-/app/billing
-```
+Before considering Phase 5A complete:
+- Logged-out users cannot access app pages.
+- Logged-in users can complete the existing local MVP flows.
+- Browser network tab does not expose internal n8n secrets.
+- Protected requests fail without a valid session.
+- Requests do not accept client-supplied `user_id` as trusted identity.
+- Customer, brand profile, and post data are isolated by authenticated user.

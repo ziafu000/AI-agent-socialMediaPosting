@@ -1,40 +1,134 @@
 ﻿# 07 - n8n Workflows
 
-## Active workflows
+## Active Workflows (18 Total)
 
-| Workflow | Webhook path |
-|---|---|
-| Create Customer | `/webhook/create-customer` |
-| Save Brand Profile | `/webhook/save-brand-profile` |
-| Create Post | `/webhook/create-post` |
-| Update Brand Profile | `/webhook/update-brand-profile` |
-| Update Post | `/webhook/update-post` |
-| List Customers | `/webhook/list-customers` |
-| Get Customer Detail | `/webhook/get-customer-detail` |
-| List Brand Profiles | `/webhook/list-brand-profiles` |
-| List Posts | `/webhook/list-posts` |
-| List Scheduled Posts | `/webhook/list-scheduled-posts` |
-| List Workflow Logs | `/webhook/list-workflow-logs` |
-| Run Schedule Simulation | `/webhook/run-schedule-simulation` |
-| Dashboard Summary | `/webhook/dashboard-summary` |
-| Generate Content Ideas | `/webhook/generate-content-ideas` |
-| Generate Caption | `/webhook/generate-caption` |
-| Rewrite Caption | `/webhook/rewrite-caption` |
-| Schedule Post | `/webhook/schedule-post` |
-| Review Post | `/webhook/review-post` |
+| Workflow | Webhook Path | Multi-Tenant |
+|---|---|---|
+| Create Customer | `/webhook/create-customer` | ⚠️ Needs `user_id` |
+| Save Brand Profile | `/webhook/save-brand-profile` | ⚠️ Needs `user_id` |
+| Create Post | `/webhook/create-post` | ⚠️ Needs `user_id` |
+| Update Brand Profile | `/webhook/update-brand-profile` | ⚠️ Needs `user_id` |
+| Update Post | `/webhook/update-post` | ⚠️ Needs `user_id` |
+| List Customers | `/webhook/list-customers` | ⚠️ Needs `user_id` |
+| Get Customer Detail | `/webhook/get-customer-detail` | ⚠️ Needs `user_id` |
+| List Brand Profiles | `/webhook/list-brand-profiles` | ⚠️ Needs `user_id` |
+| List Posts | `/webhook/list-posts` | ⚠️ Needs `user_id` |
+| List Scheduled Posts | `/webhook/list-scheduled-posts` | ⚠️ Needs `user_id` |
+| List Workflow Logs | `/webhook/list-workflow-logs` | ✅ Global (no user_id) |
+| Run Schedule Simulation | `/webhook/run-schedule-simulation` | ⚠️ Needs `user_id` |
+| Dashboard Summary | `/webhook/dashboard-summary` | ⚠️ Needs `user_id` |
+| Generate Content Ideas | `/webhook/generate-content-ideas` | ⚠️ Needs `user_id` |
+| Generate Caption | `/webhook/generate-caption` | ⚠️ Needs `user_id` |
+| Rewrite Caption | `/webhook/rewrite-caption` | ⚠️ Needs `user_id` |
+| Schedule Post | `/webhook/schedule-post` | ⚠️ Needs `user_id` |
+| Review Post | `/webhook/review-post` | ⚠️ Needs `user_id` |
 
-The exported workflow state is tracked in:
+**Workflow Backup:** `n8n/workflows/local-active-workflows.json`
+
+⚠️ **All workflows need updating for production multi-tenancy** - See [19-AUTHENTICATION-IMPLEMENTATION.md](19-AUTHENTICATION-IMPLEMENTATION.md)
+
+---
+
+## Multi-Tenant Workflow Pattern (Production-Ready)
+
+**Required for ALL workflows** (except workflow_logs which is global):
 
 ```text
-n8n/workflows/local-active-workflows.json
+Webhook Trigger
+    ↓
+Validate user_id (Code Node) ← NEW - Validate authentication
+    ↓
+IF: user_id valid?
+    ├─ No → Respond 401 Unauthorized
+    └─ Yes → Validate Input
+                ↓
+             IF: Input valid?
+                ├─ No → Respond 400 Validation Error
+                └─ Yes → [Business Logic with user_id filter]
+                            ↓
+                         Respond to Webhook
 ```
 
-## Standard workflow pattern
+### Step 1: Add user_id Validation Node
 
-```text
-Webhook -> Validate Input -> Is Valid -> [Logic] -> Respond to Webhook
-                                      -> Respond Validation Error (400)
+**Insert IMMEDIATELY after Webhook Trigger** in every workflow:
+
+**Node Name:** "Validate user_id"  
+**Node Type:** Code  
+**Code:**
+
+```javascript
+// Extract user_id from request body
+const userId = $input.all()[0].json.body.user_id;
+
+// Validate user_id exists and is non-empty
+if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+  return {
+    success: false,
+    message: 'Unauthorized',
+    error: 'Missing or invalid user_id',
+    statusCode: 401
+  };
+}
+
+// Pass through with validated user_id
+return {
+  user_id: userId.trim(),
+  ...($input.all()[0].json.body)
+};
 ```
+
+### Step 2: Add IF Node for Auth Check
+
+**Node Name:** "Check Auth"  
+**Node Type:** IF  
+**Condition:** `{{ $json.statusCode === 401 }}`
+
+- **True Branch:** → Respond 401 Error
+- **False Branch:** → Continue to existing validation
+
+### Step 3: Update ALL SQL Queries
+
+**Pattern for SELECT queries:**
+
+```sql
+-- Before (NO tenant isolation - SECURITY RISK!)
+SELECT * FROM customers;
+
+-- After (WITH tenant isolation - SECURE)
+SELECT * FROM customers 
+WHERE user_id = '{{ $json.user_id }}';
+```
+
+**Pattern for INSERT queries:**
+
+```sql
+-- Before
+INSERT INTO customers (name, email) 
+VALUES ('{{ $json.name }}', '{{ $json.email }}');
+
+-- After (include user_id)
+INSERT INTO customers (user_id, name, email)
+VALUES ('{{ $json.user_id }}', '{{ $json.name }}', '{{ $json.email }}');
+```
+
+**Pattern for UPDATE/DELETE queries:**
+
+```sql
+-- Before (ANYONE can update ANY record - SECURITY RISK!)
+UPDATE posts 
+SET status = 'scheduled' 
+WHERE id = {{ $json.id }};
+
+-- After (only owner can update - SECURE)
+UPDATE posts 
+SET status = 'scheduled'
+WHERE id = {{ $json.id }} AND user_id = '{{ $json.user_id }}';
+```
+
+---
+
+## Standard Workflow Pattern (Local Dev - Needs Migration)
 
 ## AI workflows
 

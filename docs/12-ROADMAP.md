@@ -1,131 +1,150 @@
 ﻿# 12 - Roadmap
 
-## Phase 0 - Local skeleton
+This is the canonical roadmap. It separates completed local MVP work from target production work.
 
-Goal: Frontend -> n8n -> MySQL works locally.
+## Completed: Local MVP
 
-Status: **Complete.**
+### Phase 0 - Local Skeleton
 
-## Phase 1 - Brand profile management
+**Status:** Complete
 
-Goal: Customer can save and update brand profile data.
+Goal: Next.js frontend, n8n, and MySQL work locally through Docker Compose.
 
-Status: **Complete.**
+### Phase 1 - Brand Profile Management
 
-## Phase 2 - Post draft management
+**Status:** Complete
 
-Goal: Customer can create, view, and edit post drafts.
+Goal: Create, list, and update customer brand profiles.
 
-Status: **Complete.**
+### Phase 2 - Post Draft Management
 
-## Phase 3 - AI content generation
+**Status:** Complete
 
-Goal: Generate post ideas and captions through stable n8n AI-compatible contracts.
+Goal: Create, list, and update post drafts.
 
-Completed:
+### Phase 3 - AI Content Generation
 
-- Content planner AI mode
-- Generate content ideas workflow
-- Generate caption workflow
-- Rewrite caption workflow
-- Frontend controls for idea/caption/rewrite
-- Stable webhook contracts
-- AI Code nodes wired to 9router (OpenAI-compatible endpoint)
-- Disconnected stub fallback nodes kept inside n8n
+**Status:** Complete
 
-Status: **Complete. 9router integration is live and working.**
+Goal: Generate content ideas, captions, and caption rewrites through 9router.
 
-## Phase 4 - Scheduling simulation
+### Phase 4 - Scheduling Simulation
 
-Goal: User can set scheduled_at and status becomes scheduled.
+**Status:** Complete
 
-Completed:
+Goal: Store scheduled post state locally. Real publishing is intentionally deferred.
 
-- Schedule date field
-- Scheduled status
-- Scheduled posts list
-- Dedicated schedule-post workflow
-- Workflow log entries
-- Schedule simulation flow
+### Phase 4.5 - Approval Workflow
 
-Status: **Complete. Real social publishing is still pending (Phase 5).**
+**Status:** Complete
 
-## Phase 4.5 - Approval workflow
+Goal: Move posts through review, approval, rejection, cancellation, and scheduling states.
 
-Goal: Posts can move through review before scheduling or publishing.
+## Current Focus: Phase 5 - Production Readiness
 
-Completed:
+Phase 5 must be completed before real production use.
 
-- Approve action for needs_review posts
-- Reject/cancel actions
-- Approval UI
-- n8n workflow logging for approval decisions
-- Explicit status transition validation
+### Phase 5A - Security Foundation
 
-Status: **Complete.**
+**Status:** Not implemented yet
 
-## Phase 5 - Real social posting
-
-Goal: Scheduled posts can be sent to an external posting service.
-
-Possible tools:
-
-- Buffer
-- Ayrshare
-- Publer
-- Direct platform APIs
-
-Status: **Not started.**
-
-## Phase 6 - Authentication and SaaS structure
-
-Goal: Multiple users and customers can use the app safely.
+Goal: Add authentication, tenant isolation, and secure backend boundaries.
 
 Tasks:
 
-- Add auth
-- Add workspaces
-- Add workspace members
-- Add access rules
+- [ ] Add Clerk authentication
+- [ ] Add `user_id` migration for tenant-scoped tables
+- [ ] Add `api_keys` or equivalent internal API validation
+- [ ] Stop relying on public browser-to-n8n trust for protected operations
+- [ ] Update frontend request flow
+- [ ] Update all tenant-scoped n8n workflows to validate and filter by `user_id`
+- [ ] Verify zero cross-tenant data access
 
-Status: **Not started.**
+Exit criteria:
 
-## Phase 7 - Billing
+- Authenticated users can only see their own customers, brand profiles, and posts
+- All tenant-scoped reads and writes include `user_id`
+- Direct unauthenticated access to protected workflows is blocked or rejected
 
-Goal: Paid subscription controls usage limits.
+### Phase 5B - Production Infrastructure
+
+**Status:** Pending Phase 5A
+
+Goal: Deploy the app to production-ready free/low-cost infrastructure.
 
 Tasks:
 
-- Add subscription table
-- Add usage limits
-- Add payment provider
-- Add billing page
+- [ ] Deploy frontend to Vercel
+- [ ] Deploy n8n to Fly.io
+- [ ] Deploy MySQL to Railway or another managed MySQL provider
+- [ ] Configure environment variables per environment
+- [ ] Import and activate n8n workflows
+- [ ] Verify all production webhooks and database connections
 
-Status: **Not started.**
+Exit criteria:
 
-## Completed milestones
+- No production dependency on localhost URLs
+- Production services are reachable over HTTPS
+- All core workflows pass smoke tests
 
-- Phase 0 local skeleton
-- Phase 1 brand profile management
-- Phase 2 post draft management
-- Phase 3 AI content generation via 9router
-- Phase 4 scheduling simulation
-- Phase 4.5 approval workflow
-- Dashboard summary and polish
-- Validation and error handling
-- Data consistency cleanup
-- Workflow logs
-- Laptop migration guide
+### Phase 5C - Performance and Abuse Protection
 
-## Next recommended milestone
+**Status:** Pending Phase 5B
 
-Phase 5 - Real social posting.
+Goal: Make production usage stable under early customer load.
 
-## Future milestones
+Tasks:
 
-- Calendar view
-- Social accounts management
-- Real social posting
-- Analytics and reporting
-- Authentication and workspaces
-- Billing
+- [ ] Add rate limiting
+- [ ] Add caching where useful, likely with Upstash Redis
+- [ ] Add missing database indexes
+- [ ] Review n8n/MySQL connection behavior
+- [ ] Add graceful error handling for rate limits and provider failures
+
+### Phase 5D - Monitoring and Delivery
+
+**Status:** Pending Phase 5B
+
+Goal: Add basic observability and deployment safety.
+
+Tasks:
+
+- [ ] Add error tracking
+- [ ] Add uptime monitoring
+- [ ] Add CI checks
+- [ ] Add deployment verification checklist
+- [ ] Document incident and rollback steps
+
+## Future Phases
+
+### Phase 6 - Real Social Media Publishing
+
+**Status:** Future
+
+Goal: Publish scheduled posts to real platforms through Buffer, Ayrshare, Meta Graph API, or another approved provider.
+
+Do not start until Phase 5A tenant isolation is complete.
+
+### Phase 7 - Team Workspaces
+
+**Status:** Future
+
+Goal: Add workspace/team collaboration and role-based access.
+
+### Phase 8 - Analytics and Reporting
+
+**Status:** Future
+
+Goal: Track content performance and generate reports.
+
+### Phase 9 - Billing
+
+**Status:** Future
+
+Goal: Add subscriptions, usage limits, and billing portal.
+
+## Current Recommended Next Step
+
+Implement Phase 5A Security Foundation.
+
+Start with database migration design and Clerk authentication plan before editing workflows.

@@ -1,41 +1,37 @@
 ﻿# 16 - Current State
 
-## 1. Project Identity
+This file is the canonical source of truth for the current implementation state.
+If another document conflicts with this file, verify the code/schema/workflows first and update the stale document.
+
+## Project Identity
 
 **Project name:** `AI_Automation_socialMedia`
 
-**Project type:** Local MVP for an AI Social Media Automation SaaS.
+**Project type:** Working local MVP, preparing for production-ready multi-tenant SaaS.
 
-**Main goal:**
-Build a working internal/local system where a frontend collects customer/brand/post data, sends it to n8n webhooks, stores/manages data in MySQL, and generates AI content via an OpenAI-compatible API.
+**Current phase:** Phase 5A planning / documentation cleanup before implementation.
 
-This project is **not a new project**. It already has source code, docs, Docker setup, MySQL schema/data, n8n workflows, and a Next.js frontend.
+**Main goal:** Convert the local MVP into a production-ready SaaS with authentication, tenant isolation, internal API security, and cloud deployment.
 
----
-
-## 2. Current Architecture
+## Current Local Architecture
 
 ```text
-Next.js Frontend
-        ↓
-n8n Webhooks
-        ↓
-MySQL Database
+Next.js Frontend (localhost:3000)
+  -> n8n Webhooks (localhost:5678)
+  -> MySQL Database (localhost:3306)
+  -> Docker Compose
 ```
 
-| Layer | Role |
-|---|---|
-| **Next.js frontend** | UI pages, forms, dashboard, customer/post/brand profile views |
-| **n8n** | Backend automation layer, webhook handlers, workflow logic, AI API calls |
-| **MySQL** | Stores customers, brand profiles, posts, workflow logs |
-| **Docker Compose** | Runs MySQL, n8n, and Adminer locally |
-| **DBeaver/Adminer** | Inspect and verify database data |
+Expected local services:
 
----
+```text
+Frontend: http://localhost:3000
+n8n:      http://localhost:5678
+Adminer:  http://localhost:8080
+MySQL:    localhost:3306
+```
 
-## 3. Runtime Containers
-
-Expected Docker containers:
+Local containers:
 
 ```text
 ai_social_mysql
@@ -43,132 +39,119 @@ ai_social_n8n
 ai_social_adminer
 ```
 
-Expected local URLs:
+## Target Production Architecture
 
 ```text
-Frontend: http://localhost:3000
-n8n:      http://localhost:5678
-Adminer:  http://localhost:8080
+Vercel Frontend
+  -> authenticated API layer / protected n8n calls
+  -> Fly.io n8n
+  -> Railway MySQL
+  -> Upstash Redis
 ```
 
-Safe start command:
+Target services:
 
-```powershell
-docker compose up -d
-```
+| Layer | Current | Target |
+|---|---|---|
+| Frontend | Local Next.js | Vercel |
+| Automation/API | Local n8n Docker | Fly.io n8n |
+| Database | Local MySQL Docker | Railway MySQL |
+| Cache | None | Upstash Redis |
+| Auth | None | Clerk |
+| Monitoring | None | Sentry + uptime monitor |
 
-Safe stop command:
+## Current Implementation Status
 
-```powershell
-docker compose down
-```
+Completed local MVP:
 
-Danger command (deletes all volume data):
+- Customer management
+- Brand profile management
+- Post draft management
+- AI content ideas and caption generation via 9router
+- Caption rewrite
+- Scheduling simulation
+- Approval workflow
+- Dashboard summary
+- Workflow logs
+- Data consistency scripts
+- 18 local n8n workflows
 
-```powershell
-docker compose down -v
-```
+Not implemented yet:
 
----
+- Authentication
+- `user_id` tenant isolation in the actual database
+- `api_keys` table
+- Internal API key validation
+- Next.js API proxy layer
+- Production deployment
+- Redis caching
+- Monitoring / CI/CD
+- Real social media publishing
 
-## 4. Important Local Files
+## Important Local Files
 
 ```text
-.env
-apps/web/.env.local
+README.md
+AGENTS.md
+docs/AGENT_PROJECT_BRIEF.md
 docker-compose.yml
 docker/mysql/init/001_init.sql
+apps/web/src/lib/n8n-client.ts
 n8n/workflows/local-active-workflows.json
-docs/
+n8n/workflows/README.md
 ```
 
-Files that must not be committed:
+Secrets must not be committed:
 
 ```text
 .env
 .env.local
 apps/web/.env.local
-migration-backup/
-*.tar.gz
 *credentials*.json
 mysql*.sql
+migration-backup/
+*.tar.gz
 ```
 
----
-
-## 5. Environment Variables
-
-Root `.env` keys:
-
-```text
-MYSQL_ROOT_PASSWORD
-MYSQL_DATABASE
-MYSQL_USER
-MYSQL_PASSWORD
-MYSQL_PORT
-
-N8N_PORT
-N8N_BASIC_AUTH_USER
-N8N_BASIC_AUTH_PASSWORD
-N8N_ENCRYPTION_KEY
-
-NINEROUTER_API_KEY
-NINEROUTER_API_URL
-NINEROUTER_API_MODEL
-```
-
-`apps/web/.env.local` keys (webhook URLs):
-
-```text
-NEXT_PUBLIC_N8N_CREATE_CUSTOMER_WEBHOOK_URL
-NEXT_PUBLIC_N8N_LIST_CUSTOMERS_WEBHOOK_URL
-NEXT_PUBLIC_N8N_DASHBOARD_SUMMARY_WEBHOOK_URL
-NEXT_PUBLIC_N8N_GENERATE_CAPTION_WEBHOOK_URL
-NEXT_PUBLIC_N8N_REWRITE_CAPTION_WEBHOOK_URL
-```
-
-`N8N_ENCRYPTION_KEY` is critical. Keep the same key when restoring n8n data.
-
-`NINEROUTER_API_URL` must use `host.docker.internal` (not `localhost`) when the AI service runs on the host machine.
-
----
-
-## 6. Database State
+## Database State
 
 Main database: `ai_social_saas`
 
-| Table | Purpose |
-|---|---|
-| `customers` | Stores customer/client records |
-| `brand_profiles` | Stores brand voice, audience, CTA, products/services |
-| `posts` | Stores generated/scheduled/draft post data |
-| `workflow_logs` | Stores n8n workflow activity logs |
-
-Verify database:
-
-```powershell
-docker exec ai_social_mysql mysql -uroot -p<MYSQL_ROOT_PASSWORD> ai_social_saas -e "SHOW TABLES; SELECT COUNT(*) AS customers FROM customers; SELECT COUNT(*) AS brand_profiles FROM brand_profiles; SELECT COUNT(*) AS posts FROM posts; SELECT COUNT(*) AS logs FROM workflow_logs;"
-```
-
----
-
-## 7. Frontend State
-
-Location: `apps/web`
-
-Run:
-
-```powershell
-cd apps/web
-npm install
-npm run dev
-```
-
-URL: `http://localhost:3000`
-
-Pages:
+Actual current schema is defined in:
 
 ```text
+docker/mysql/init/001_init.sql
+```
+
+Current tables:
+
+| Table | Purpose | Current tenant isolation |
+|---|---|---|
+| `customers` | Customer/client records | Missing `user_id` |
+| `brand_profiles` | Brand configuration | Missing `user_id` |
+| `posts` | Draft/scheduled/reviewed posts | Missing `user_id` |
+| `workflow_logs` | Workflow activity logs | Global logs |
+
+Target schema is documented in `docs/06-DATABASE-SCHEMA.md`, but it is not fully implemented yet.
+
+## Frontend State
+
+Frontend location:
+
+```text
+apps/web
+```
+
+The frontend currently calls n8n webhooks directly through:
+
+```text
+apps/web/src/lib/n8n-client.ts
+```
+
+Current routes include:
+
+```text
+/
 /dashboard
 /customers
 /customers/[id]
@@ -185,151 +168,97 @@ Pages:
 /approvals
 ```
 
----
+Target production frontend changes:
 
-## 8. n8n State
+- Add Clerk provider and auth routes
+- Protect private routes
+- Stop exposing direct n8n webhook URLs to browser code where possible
+- Add a server-side API layer or equivalent secure mediation
+- Attach authenticated user context to tenant-scoped operations
 
-Container: `ai_social_n8n`
-URL: `http://localhost:5678`
+## n8n State
 
-Active workflows (18 total):
+Local n8n URL:
 
 ```text
-Create Customer, Save Brand Profile, Create Post
-List Customers, Get Customer Detail
-List Brand Profiles, Update Brand Profile
-List Posts, Update Post
-List Scheduled Posts, List Workflow Logs
-Run Schedule Simulation, Dashboard Summary
-Generate Content Ideas, Generate Caption, Rewrite Caption
-Schedule Post, Review Post
+http://localhost:5678
 ```
 
-Workflow backup: `n8n/workflows/local-active-workflows.json`
+Active workflow export:
 
-### AI Code nodes
+```text
+n8n/workflows/local-active-workflows.json
+```
 
-All 3 AI workflows use `this.helpers.httpRequest()` inside a Code node to call 9router.
+Current workflow count: 18.
 
-Required docker-compose setting to allow env var access in Code nodes:
+Current workflows include customer, brand profile, post, scheduling, approval, dashboard, logs, and AI content generation flows.
+
+All tenant-scoped workflows still need to be updated for authentication and `user_id` filtering.
+
+## AI Provider
+
+AI workflows use 9router through environment variables:
+
+```text
+NINEROUTER_API_KEY
+NINEROUTER_API_URL
+NINEROUTER_API_MODEL
+```
+
+n8n Code nodes require:
 
 ```yaml
-- N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 ```
 
-Env vars used inside Code nodes:
+## Safe Commands
 
-```text
-.NINEROUTER_API_KEY
-.NINEROUTER_API_URL
-.NINEROUTER_API_MODEL
-```
-
-### MySQL credential inside n8n
-
-```text
-Host: mysql
-Port: 3306
-```
-
-Do not use `localhost` inside n8n for MySQL.
-
----
-
-## 9. Webhook Paths
-
-```text
-/webhook/create-customer
-/webhook/list-customers
-/webhook/get-customer-detail
-/webhook/save-brand-profile
-/webhook/list-brand-profiles
-/webhook/update-brand-profile
-/webhook/create-post
-/webhook/list-posts
-/webhook/update-post
-/webhook/list-workflow-logs
-/webhook/list-scheduled-posts
-/webhook/run-schedule-simulation
-/webhook/dashboard-summary
-/webhook/generate-content-ideas
-/webhook/generate-caption
-/webhook/rewrite-caption
-/webhook/schedule-post
-/webhook/review-post
-```
-
-Use production webhook URLs: `http://localhost:5678/webhook/{path}`
-
-Do not use `/webhook-test/` for normal app runtime.
-
----
-
-## 10. Quick Verify Commands
-
-Check containers:
+Start local infrastructure:
 
 ```powershell
-docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"
+docker compose up -d
 ```
 
-Test webhook:
+Stop local infrastructure without deleting volumes:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/list-customers" -ContentType "application/json" -Body "{}"
+docker compose down
 ```
 
-Test AI:
+Run frontend:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/generate-caption" -ContentType "application/json" -Body '{"customer_id":1,"brand_profile_id":1,"brand_name":"Demo","platform":"facebook","topic":"Test","content_pillar":"education","goal":"build_trust"}'
+npm run dev:web
 ```
 
----
+Dangerous command, requires explicit approval:
 
-## 11. Current Development Rules
-
-Do not:
-
-```text
-- Treat as a new project
-- Rewrite the whole project
-- Delete existing features/pages/workflows/schema/docs
-- Change architecture without approval
-- Add auth/payment/real social posting unless explicitly requested
-- Drop database/table
-- Remove env keys
-- Commit secrets
+```powershell
+docker compose down -v
 ```
 
-Do:
+## Next Immediate Work
 
-```text
-- Read README.md and docs/ first
-- Inspect relevant files before editing
-- Make small, controlled changes
-- Preserve existing behavior
-- Explain risks before major changes
-- Ask before deleting or refactoring
-- Provide verification commands
-```
+Phase 5A: Security Foundation.
 
----
+Recommended order:
 
-## 12. Completed Milestones
+1. Finalize docs/contracts for current vs target behavior
+2. Design `user_id` database migration
+3. Add Clerk authentication to frontend
+4. Add secure server-side request layer or internal API protection
+5. Update all n8n workflows for `user_id` validation and filtering
+6. Verify tenant isolation before production deployment
 
-- Phase 0 local skeleton
-- Phase 1 brand profile management
-- Phase 2 post draft management
-- Phase 3 AI content generation (9router, OpenAI-compatible)
-- Phase 4 scheduling simulation
-- Phase 4.5 approval workflow
-- Dashboard summary and polish
-- Validation and error handling
-- Data consistency cleanup
-- Workflow logs
-- Laptop migration
+## Future Work
 
-## Next Recommended Step
+After Phase 5A:
 
-Phase 5 - Real social posting.
+- Phase 5B: Production infrastructure deployment
+- Phase 5C: Caching, rate limiting, performance
+- Phase 5D: Monitoring and CI/CD
+- Phase 6: Real social media publishing
+- Phase 7: Team workspaces
+- Phase 8: Analytics
+- Phase 9: Billing

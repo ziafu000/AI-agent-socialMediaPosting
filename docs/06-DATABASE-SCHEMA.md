@@ -1,141 +1,156 @@
-# 06 — Database Schema
+﻿# 06 - Database Schema
 
-## Database name
+This document separates the actual local schema from the target production schema.
+The actual source of truth for the current local database is `docker/mysql/init/001_init.sql`.
+
+## Database Name
 
 ```text
 ai_social_saas
 ```
 
-## Initial SQL file
+## Current Local Schema
 
-File path:
+Status: implemented in local Docker MySQL.
+
+Current tables:
+
+| Table | Purpose | Current tenant isolation |
+|---|---|---|
+| `customers` | Customer/client records | Missing `user_id` |
+| `brand_profiles` | Brand configuration | Missing `user_id` |
+| `posts` | Draft, reviewed, scheduled, and simulated publishing state | Missing `user_id` |
+| `workflow_logs` | n8n workflow activity logs | Global logs |
+
+Important current limitations:
+
+- `customers.email` is globally unique in the current local schema.
+- `user_id` is not present yet.
+- `api_keys` table is not present yet.
+- Existing n8n SQL queries are not tenant-isolated yet.
+
+## Target Production Schema
+
+Status: target design, not fully implemented yet.
+
+Tenant-scoped tables should include:
 
 ```text
-docker/mysql/init/001_init.sql
+user_id VARCHAR(255) NOT NULL
 ```
 
-## SQL schema
+Target tenant-scoped tables:
 
-```sql
-CREATE TABLE IF NOT EXISTS customers (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  company_name VARCHAR(255),
-  industry VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+- `customers`
+- `brand_profiles`
+- `posts`
 
-CREATE TABLE IF NOT EXISTS brand_profiles (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  customer_id BIGINT UNSIGNED NOT NULL,
-  brand_name VARCHAR(255) NOT NULL,
-  target_audience TEXT,
-  brand_voice TEXT,
-  products_services TEXT,
-  default_cta TEXT,
-  words_to_use TEXT,
-  words_to_avoid TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
-);
+Target security/support tables:
 
-CREATE TABLE IF NOT EXISTS posts (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  customer_id BIGINT UNSIGNED NOT NULL,
-  platform VARCHAR(50) NOT NULL,
-  topic VARCHAR(255) NOT NULL,
-  caption TEXT,
-  hashtags TEXT,
-  status ENUM('draft', 'needs_review', 'approved', 'scheduled', 'publishing', 'published', 'failed', 'cancelled') DEFAULT 'draft',
-  scheduled_at DATETIME NULL,
-  published_at DATETIME NULL,
-  external_post_id VARCHAR(255),
-  error_message TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
-);
+- `api_keys` or equivalent internal API authentication table/mechanism
+- `workflow_logs` may remain global, but should avoid storing sensitive payloads where possible
 
-CREATE TABLE IF NOT EXISTS workflow_logs (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  workflow_name VARCHAR(255) NOT NULL,
-  event_type VARCHAR(100) NOT NULL,
-  status ENUM('success', 'failed') NOT NULL,
-  input_payload JSON NULL,
-  output_payload JSON NULL,
-  error_message TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO customers (name, email, company_name, industry)
-VALUES
-('Demo Customer', 'demo@example.com', 'Demo Spa', 'Beauty & Spa')
-ON DUPLICATE KEY UPDATE email = email;
-```
-
-## Table purposes
+## Target Table Changes
 
 ### `customers`
 
-Stores client/customer identity.
+Target changes:
 
-Initial fields:
+- Add `user_id`
+- Replace globally unique `email` with unique `(user_id, email)`
+- Add index on `user_id`
 
-- Name
-- Email
-- Company name
-- Industry
+Target uniqueness:
+
+```sql
+UNIQUE KEY unique_user_email (user_id, email)
+```
 
 ### `brand_profiles`
 
-Stores brand configuration for AI content generation.
+Target changes:
 
-One customer can have multiple brand profiles later, but initially use one profile per customer.
+- Add `user_id`
+- Add index on `user_id`
+- Ensure referenced `customer_id` belongs to the same `user_id`
+- Prefer tenant-aware lookup/update patterns
 
 ### `posts`
 
-Stores generated or scheduled social posts.
+Target changes:
 
-The status field controls the publishing workflow.
+- Add `user_id`
+- Add index on `user_id`
+- Ensure referenced `customer_id` belongs to the same `user_id`
+- All reads and updates must filter by both `id` and `user_id` where applicable
 
-### `workflow_logs`
+### `api_keys`
 
-Stores important n8n workflow events.
+Target table, not implemented yet:
 
-Useful for debugging.
+```sql
+CREATE TABLE api_keys (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id VARCHAR(255) NOT NULL UNIQUE,
+  api_key VARCHAR(64) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_used_at TIMESTAMP NULL,
+  INDEX idx_api_key (api_key),
+  INDEX idx_user_id (user_id)
+);
+```
 
-## Status lifecycle for posts
+## Migration Direction
+
+Do not modify production data or reset volumes without explicit approval.
+
+Recommended migration order:
+
+1. Add nullable or temporary-default `user_id` columns to tenant-scoped tables
+2. Backfill existing local data to a known Clerk test user
+3. Add indexes on `user_id`
+4. Change app and n8n workflows to write/read `user_id`
+5. Verify tenant isolation
+6. Tighten constraints and remove temporary defaults
+7. Add `api_keys` or approved internal auth mechanism
+
+Example migration sketch:
+
+```sql
+ALTER TABLE customers ADD COLUMN user_id VARCHAR(255) NULL;
+ALTER TABLE brand_profiles ADD COLUMN user_id VARCHAR(255) NULL;
+ALTER TABLE posts ADD COLUMN user_id VARCHAR(255) NULL;
+
+CREATE INDEX idx_customers_user_id ON customers(user_id);
+CREATE INDEX idx_brand_profiles_user_id ON brand_profiles(user_id);
+CREATE INDEX idx_posts_user_id ON posts(user_id);
+```
+
+Use a reviewed migration file for real implementation. Do not rely only on editing `001_init.sql` if existing data must be preserved.
+
+## Post Status Lifecycle
+
+Normal path:
 
 ```text
-draft
-→ needs_review
-→ approved
-→ scheduled
-→ publishing
-→ published
+draft -> needs_review -> approved -> scheduled -> publishing -> published
 ```
 
 Failure path:
 
 ```text
-scheduled
-→ publishing
-→ failed
+scheduled -> publishing -> failed
 ```
 
 Cancel path:
 
 ```text
-draft/needs_review/approved/scheduled
-→ cancelled
+draft/needs_review/approved/scheduled -> cancelled
 ```
 
-## DBeaver connection
+## Local Database Access
 
-Use:
+DBeaver/Adminer connection:
 
 ```text
 Host: localhost

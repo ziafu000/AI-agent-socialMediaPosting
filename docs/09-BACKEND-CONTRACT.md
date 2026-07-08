@@ -1,410 +1,203 @@
-# 09 - Backend Contract
+﻿# 09 - Backend Contract
 
-## Current backend style
+This document separates the current local n8n contract from the target production contract.
 
-n8n acts as the backend automation layer.
+## Current Backend Style
 
-The frontend communicates with n8n using HTTP webhooks.
+The current backend is implemented mainly as n8n workflows exposed through webhooks.
 
-Production/local active webhook URLs use:
-
-```text
-http://localhost:5678/webhook/{path}
-```
-
-Test-mode webhook URLs use:
+Current request flow:
 
 ```text
-http://localhost:5678/webhook-test/{path}
+Next.js browser client -> n8n webhook -> MySQL
 ```
 
-## Common error response
+The current local MVP works, but it is not a production security boundary.
 
-Current standardized shape:
+## Current Contract Rules
+
+Current local endpoints:
+- Do not require authentication.
+- Do not require `user_id`.
+- Trust direct webhook requests from the frontend.
+- Use current table relationships such as `customer_id`, `brand_profile_id`, and `post_id`.
+
+The actual database schema source is:
+- `docker/mysql/init/001_init.sql`
+
+## Current Entity Contracts
+
+### Customers
+
+Core fields:
+- `id`
+- `name`
+- `email`
+- `phone`
+- `company`
+- `industry`
+- `status`
+- `notes`
+- timestamps
+
+Current limitation:
+- `email` is globally unique.
+- There is no `user_id` owner column yet.
+
+### Brand Profiles
+
+Core fields:
+- `id`
+- `customer_id`
+- `brand_name`
+- `brand_voice`
+- `target_audience`
+- `industry`
+- `brand_colors`
+- `logo_url`
+- `website_url`
+- `social_handles`
+- `content_guidelines`
+- timestamps
+
+Current limitation:
+- Ownership is only indirect through `customer_id`.
+- There is no tenant isolation yet.
+
+### Posts
+
+Core fields:
+- `id`
+- `customer_id`
+- `brand_profile_id`
+- `title`
+- `content`
+- `platform`
+- `status`
+- `scheduled_at`
+- `published_at`
+- `ai_generated`
+- `metadata`
+- timestamps
+
+Current statuses:
+- `draft`
+- `scheduled`
+- `published`
+- `failed`
+
+Current limitation:
+- No real social media publishing integration is implemented yet.
+- Post ownership is not isolated by authenticated user yet.
+
+### Workflow Logs
+
+Core fields:
+- `id`
+- `workflow_name`
+- `execution_id`
+- `status`
+- `input_data`
+- `output_data`
+- `error_message`
+- timestamps
+
+Current use:
+- Operational logging for n8n workflows.
+
+## Current API Response Shape
+
+Keep responses predictable for frontend code:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Optional message"
+}
+```
+
+Error shape:
 
 ```json
 {
   "success": false,
-  "message": "Validation failed",
-  "error": "Reason here"
+  "error": "Human-readable error"
 }
 ```
 
-Status codes now used:
+## Current Limitations
 
-- `400` for validation failure
-- `404` when an update target record does not exist
+The current backend contract is local-MVP only:
+- No authentication.
+- No tenant/user isolation.
+- No internal API key validation.
+- No server-side Next.js API boundary.
+- Direct browser access to webhook URLs.
+- n8n SQL queries are not consistently scoped by authenticated user.
 
-## Contract 1 - Create Customer
+## Target Phase 5A Contract
 
-Implemented endpoint:
+Phase 5A should define a production-safe internal contract between Next.js server routes and n8n.
 
-```text
-POST http://localhost:5678/webhook/create-customer
-```
-
-Request body:
-
-```json
-{
-  "name": "string",
-  "email": "string",
-  "company_name": "string",
-  "industry": "string"
-}
-```
-
-Required fields:
+Target request flow:
 
 ```text
-name
-email
+Browser -> Next.js API route -> n8n protected webhook -> MySQL
 ```
 
-Success response:
-
-```json
-{
-  "success": true,
-  "message": "Customer saved successfully"
-}
-```
-
-Behavior:
-
-- inserts a new customer
-- updates the existing customer when `email` already exists
-
-## Contract 2 - Save Brand Profile
-
-Implemented endpoint:
-
-```text
-POST http://localhost:5678/webhook/save-brand-profile
-```
-
-Request body:
-
-```json
-{
-  "customer_id": 1,
-  "brand_name": "Demo Spa",
-  "target_audience": "Women aged 25-40",
-  "brand_voice": "Professional, friendly, trustworthy",
-  "products_services": "Facial care, acne treatment, skincare consulting",
-  "default_cta": "Message us for a free consultation",
-  "words_to_use": "safe, gentle, expert",
-  "words_to_avoid": "guaranteed cure, miracle"
-}
-```
-
-Required fields:
-
-```text
-customer_id
-brand_name
-```
-
-Success response:
-
-```json
-{
-  "success": true,
-  "message": "Brand profile saved successfully"
-}
-```
-
-Behavior:
-
-- updates the latest existing row when `customer_id + brand_name` already exists
-- inserts a new row when no matching brand profile exists
-
-## Contract 3 - Create Post
-
-Implemented endpoint:
-
-```text
-POST http://localhost:5678/webhook/create-post
-```
-
-Request body:
-
-```json
-{
-  "customer_id": 1,
-  "platform": "facebook",
-  "topic": "3 common skincare mistakes",
-  "caption": "Post caption",
-  "hashtags": "#skincare",
-  "status": "draft",
-  "scheduled_at": ""
-}
-```
-
-Required fields:
-
-```text
-customer_id
-platform
-topic
-status
-```
-
-Behavior:
-
-- avoids inserting another row for the same exact post draft payload
-- `status = scheduled` requires `scheduled_at`
-
-## Contract 4 - Update Brand Profile
-
-Implemented endpoint:
-
-```text
-POST http://localhost:5678/webhook/update-brand-profile
-```
-
-Returns `404` when the target brand profile does not exist.
-
-## Contract 5 - Update Post
-
-Implemented endpoint:
-
-```text
-POST http://localhost:5678/webhook/update-post
-```
-
-Returns `404` when the target post does not exist.
-
-## Contract 6 - Read and Utility Endpoints
-
-Implemented endpoints:
-
-```text
-POST http://localhost:5678/webhook/list-customers
-POST http://localhost:5678/webhook/get-customer-detail
-POST http://localhost:5678/webhook/list-brand-profiles
-POST http://localhost:5678/webhook/list-posts
-POST http://localhost:5678/webhook/list-scheduled-posts
-POST http://localhost:5678/webhook/list-workflow-logs
-POST http://localhost:5678/webhook/run-schedule-simulation
-POST http://localhost:5678/webhook/dashboard-summary
-```
-
-## Contract 7 - Generate Content Ideas
-
-Implemented as a model-backed production contract with a temporary DeepSeek node.
-
-Current endpoint:
-
-```text
-POST http://localhost:5678/webhook/generate-content-ideas
-```
-
-Current request body:
-
-```json
-{
-  "customer_id": 1,
-  "brand_profile_id": 1,
-  "platforms": ["facebook", "instagram"],
-  "content_pillars": ["education", "trust"],
-  "number_of_posts": 6,
-  "campaign": "June skincare education",
-  "offer": "Acne treatment package",
-  "call_to_action": "Book a consultation"
-}
-```
-
-Current response:
-
-```json
-{
-  "success": true,
-  "posts": [
-    {
-      "platform": "facebook",
-      "topic": "3 common skincare mistakes",
-      "content_pillar": "education",
-      "goal": "build_trust",
-      "caption": "Post draft text here",
-      "hashtags": "#facebook #skincare"
-    }
-  ]
-}
-```
-
-Behavior:
-
-- the current workflow calls a temporary DeepSeek model node
-- the old deterministic stub node remains in n8n as a disconnected fallback
-- frontend should treat this contract as stable and should not depend on the model provider
-- if the temporary API key has no credit, the workflow returns `success: false` with the provider error
-
-## Contract 8 - Generate Caption
-
-Implemented as a model-backed production contract with a temporary DeepSeek node.
-
-Current endpoint:
-
-```text
-POST http://localhost:5678/webhook/generate-caption
-```
-
-Current request body:
-
-```json
-{
-  "customer_id": 1,
-  "brand_profile_id": 1,
-  "brand_name": "Demo Spa",
-  "target_audience": "Women aged 25-40",
-  "brand_voice": "Professional and friendly",
-  "default_cta": "Book a consultation",
-  "words_to_use": "safe, expert",
-  "platform": "facebook",
-  "topic": "3 common skincare mistakes",
-  "content_pillar": "education",
-  "goal": "build_trust",
-  "campaign": "June skincare education",
-  "offer": "Acne treatment package",
-  "call_to_action": "Book a consultation"
-}
-```
-
-Current response:
-
-```json
-{
-  "success": true,
-  "caption": "Post draft text here",
-  "hashtags": "#facebook #education #june"
-}
-```
-
-Behavior:
-
-- the current workflow calls a temporary DeepSeek model node
-- the old deterministic stub node remains in n8n as a disconnected fallback
-- the content planner updates only the selected idea card when caption generation succeeds
-- if the temporary API key has no credit, the workflow returns `success: false` with the provider error
-
-## Contract 9 - Rewrite Caption
-
-Implemented as a model-backed production contract with a temporary DeepSeek node.
-
-Current endpoint:
-
-```text
-POST http://localhost:5678/webhook/rewrite-caption
-```
-
-Current request body extends `Generate Caption` with:
-
-```json
-{
-  "current_caption": "Existing caption text",
-  "current_hashtags": "#facebook #education",
-  "rewrite_style": "shorter"
-}
-```
-
-Allowed `rewrite_style` values:
-
-```text
-shorter
-more_engaging
-more_professional
-more_sales_focused
-```
-
-Current response:
-
-```json
-{
-  "success": true,
-  "caption": "Rewritten caption text here",
-  "hashtags": "#facebook #education"
-}
-```
-
-Behavior:
-
-- the current workflow calls a temporary DeepSeek model node
-- the old deterministic stub node remains in n8n as a disconnected fallback
-- the content planner updates only the selected idea card when rewrite succeeds
-- if the temporary API key has no credit, the workflow returns `success: false` with the provider error
-
-## Contract 10 - Dedicated Schedule Post
-
-Implemented endpoint:
-
-```text
-POST http://localhost:5678/webhook/schedule-post
-```
-
-Request body:
-
-```json
-{
-  "id": 1,
-  "scheduled_at": "2026-05-14T21:30"
-}
-```
-
-Required fields:
-
-```text
-id
-scheduled_at
-```
-
-Success response:
-
-```json
-{
-  "success": true,
-  "message": "Post scheduled successfully"
-}
-```
-
-Behavior:
-
-- validates the target post ID and schedule datetime
-- returns `404` when the target post does not exist
-- updates `posts.status` to `scheduled`
-- updates `posts.scheduled_at`
-- writes a `workflow_logs` row with `event_type = schedule_post`
-
-## Contract 11 - Review Post
-
-Implemented endpoint:
-
-```text
-POST http://localhost:5678/webhook/review-post
-```
-
-Request body:
-
-```json
-{
-  "id": 1,
-  "action": "approve"
-}
-```
-
-Allowed `action` values:
-
-```text
-approve
-reject
-cancel
-```
-
-Behavior:
-
-- `approve` allows `needs_review -> approved`
-- `reject` allows `needs_review -> cancelled`
-- `cancel` allows `draft/needs_review/approved/scheduled -> cancelled`
-- invalid transitions return HTTP `400`
-- missing post returns HTTP `404`
-- approval decisions write `workflow_logs` rows with `approve_post`, `reject_post`, or `cancel_post`
+Target rules:
+- Browser never sends trusted `user_id` directly to n8n.
+- Next.js verifies the authenticated session.
+- Next.js derives `user_id` from Clerk/server-side auth.
+- Next.js forwards trusted `user_id` to n8n.
+- Next.js includes internal auth when calling n8n.
+- n8n rejects requests without valid internal auth.
+- n8n queries must filter tenant-scoped tables by `user_id`.
+
+## Target Protected Request Metadata
+
+Recommended server-to-n8n metadata:
+- `user_id` - trusted authenticated user id
+- `request_id` - optional trace id
+- `source` - expected internal caller identifier
+- internal auth header or API key
+
+Do not trust equivalent fields when they come directly from browser requests.
+
+## Target Error Semantics
+
+Recommended production errors:
+- `401` - missing or invalid user session at Next.js boundary
+- `403` - internal auth failed or user cannot access resource
+- `404` - resource not found within current user's tenant scope
+- `409` - unique constraint or state conflict
+- `422` - validation error
+- `500` - unexpected workflow/server error
+
+## Migration Rules
+
+During Phase 5A, keep every endpoint labeled as either current or target.
+
+Do not update only one layer. Contract-impacting changes must be synchronized across:
+- database schema
+- n8n workflows
+- frontend request client/API routes
+- documentation
+
+Safe migration order:
+1. Add `user_id` target schema and migration plan.
+2. Add authentication to frontend/server routes.
+3. Add internal auth to n8n entrypoints.
+4. Update SQL queries to filter by `user_id`.
+5. Move frontend calls behind Next.js server routes.
+6. Verify tenant isolation with at least two users.
+
+## Out of Scope Until After Phase 5A
+
+Do not prioritize these until tenant isolation and internal API security are complete:
+- Real social platform posting APIs
+- Multi-workspace billing plans
+- Advanced analytics
+- External customer self-service portals
+- Large-scale queue optimization

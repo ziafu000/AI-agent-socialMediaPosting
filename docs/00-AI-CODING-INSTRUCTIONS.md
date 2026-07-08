@@ -10,32 +10,54 @@ The user is still learning Docker, GitHub, database design, and full-stack devel
 
 Build in small working milestones. Do not jump to advanced SaaS features before the local skeleton works.
 
-## Current target
+## Current Target
 
-Create a local development project where:
+Transform from local MVP to production-ready SaaS:
 
 ```text
-Next.js frontend
-→ calls n8n webhook
-→ n8n inserts customer data
-→ MySQL stores data
-→ DBeaver can inspect the data
+Phase 5A (Week 1-2): Security Foundation
+- Add Clerk authentication
+- Implement tenant isolation (user_id in all tables)
+- Add API key validation
+
+Phase 5B (Week 3-4): Infrastructure
+- Deploy to Railway (MySQL), Fly.io (n8n), Vercel (frontend)
+- All free tiers
+
+Phase 5C (Week 5-6): Performance
+- Add Upstash Redis caching
+- Implement rate limiting
+
+Phase 5D (Week 7-8): Monitoring
+- Sentry error tracking
+- UptimeRobot monitoring
+- GitHub Actions CI/CD
 ```
 
-## Do not add yet
+**Cost Target:** $0/month for first 1,000 users
+
+## Now In Scope (Production Readiness)
+
+These are now part of the active roadmap:
+
+- ✅ Authentication (Clerk - free tier)
+- ✅ Multi-tenancy and data isolation
+- ✅ Production deployment (Vercel + Fly.io + Railway - free tiers)
+- ✅ API security and rate limiting
+- ✅ Caching layer (Upstash Redis - free tier)
+- ✅ Monitoring and observability (Sentry + UptimeRobot - free tiers)
+
+## Still Out of Scope
 
 Do not add these unless explicitly requested:
 
-- Payment system
-- Authentication
-- OpenAI API integration
-- Social media posting API
-- Kubernetes
-- Production deployment
-- Advanced analytics
-- Multi-role permission system
+- Payment system (Phase 9)
+- Real social media posting (Phase 6)
+- Team workspaces (Phase 7)
+- Advanced analytics (Phase 8)
 - Complex ORM migrations
-- Microservices
+- Kubernetes or microservices
+- Custom backend (keep n8n)
 
 ## Preferred implementation style
 
